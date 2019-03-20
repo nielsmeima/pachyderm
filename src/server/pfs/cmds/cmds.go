@@ -63,7 +63,7 @@ Repos are created with create-repo.
 
 	var description string
 	createRepo := &cobra.Command{
-		Use:   "create-repo repo-name",
+		Use:   "create-repo <repo>",
 		Short: "Create a new repo.",
 		Long:  "Create a new repo.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
@@ -85,7 +85,7 @@ Repos are created with create-repo.
 	createRepo.Flags().StringVarP(&description, "description", "d", "", "A description of the repo.")
 
 	updateRepo := &cobra.Command{
-		Use:   "update-repo repo-name",
+		Use:   "update-repo <repo>",
 		Short: "Update a repo.",
 		Long:  "Update a repo.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
@@ -108,7 +108,7 @@ Repos are created with create-repo.
 	updateRepo.Flags().StringVarP(&description, "description", "d", "", "A description of the repo.")
 
 	inspectRepo := &cobra.Command{
-		Use:   "inspect-repo repo-name",
+		Use:   "inspect-repo <repo>",
 		Short: "Return info about a repo.",
 		Long:  "Return info about a repo.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
@@ -177,7 +177,7 @@ Repos are created with create-repo.
 	var force bool
 	var all bool
 	deleteRepo := &cobra.Command{
-		Use:   "delete-repo repo-name",
+		Use:   "delete-repo <repo>",
 		Short: "Delete a repo.",
 		Long:  "Delete a repo.",
 		Run: cmdutil.RunBoundedArgs(0, 1, func(args []string) error {
@@ -230,7 +230,7 @@ This layers the data in the commit over the data in the parent.
 
 	var parent string
 	startCommit := &cobra.Command{
-		Use:   "start-commit repo-name [branch]",
+		Use:   "start-commit <repo>@<branch-or-commit>",
 		Short: "Start a new commit.",
 		Long: `Start a new commit with parent-commit as the parent, or start a commit on the given branch; if the branch does not exist, it will be created.
 
@@ -276,7 +276,7 @@ $ pachctl start-commit test -p XXX
 	startCommit.Flags().StringVar(&description, "description", "", "A description of this commit's contents (synonym for --message)")
 
 	finishCommit := &cobra.Command{
-		Use:   "finish-commit repo-name commit-id",
+		Use:   "finish-commit <repo>@<branch-or-commit>",
 		Short: "Finish a started commit.",
 		Long:  "Finish a started commit. Commit-id must be a writeable commit.",
 		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
@@ -300,7 +300,7 @@ $ pachctl start-commit test -p XXX
 	finishCommit.Flags().StringVar(&description, "description", "", "A description of this commit's contents (synonym for --message)")
 
 	inspectCommit := &cobra.Command{
-		Use:   "inspect-commit repo-name commit-id",
+		Use:   "inspect-commit <repo>@<branch-or-commit>",
 		Short: "Return info about a commit.",
 		Long:  "Return info about a commit.",
 		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
@@ -332,7 +332,7 @@ $ pachctl start-commit test -p XXX
 	var from string
 	var number int
 	listCommit := &cobra.Command{
-		Use:   "list-commit repo-name",
+		Use:   "list-commit <repo>",
 		Short: "Return all commits on a set of repos.",
 		Long: `Return all commits on a set of repos.
 
@@ -415,17 +415,17 @@ $ pachctl list-commit foo master --from XXX
 
 	var repos cmdutil.RepeatedStringArg
 	flushCommit := &cobra.Command{
-		Use:   "flush-commit commit [commit ...]",
+		Use:   "flush-commit <repo>@<branch-or-commit> ...",
 		Short: "Wait for all commits caused by the specified commits to finish and return them.",
 		Long: `Wait for all commits caused by the specified commits to finish and return them.
 
 Examples:
 
-` + codestart + `# return commits caused by foo/XXX and bar/YYY
-$ pachctl flush-commit foo/XXX bar/YYY
+` + codestart + `# return commits caused by foo@XXX and bar@YYY
+$ pachctl flush-commit foo@XXX bar@YYY
 
-# return commits caused by foo/XXX leading to repos bar and baz
-$ pachctl flush-commit foo/XXX -r bar -r baz
+# return commits caused by foo@XXX leading to repos bar and baz
+$ pachctl flush-commit foo@XXX -r bar -r baz
 ` + codeend,
 		Run: cmdutil.Run(func(args []string) error {
 			commits, err := cmdutil.ParseCommits(args)
@@ -458,7 +458,7 @@ $ pachctl flush-commit foo/XXX -r bar -r baz
 
 	var new bool
 	subscribeCommit := &cobra.Command{
-		Use:   "subscribe-commit repo branch",
+		Use:   "subscribe-commit <repo>@<branch-or-commit>",
 		Short: "Print commits as they are created (finished).",
 		Long: `Print commits as they are created in the specified repo and
 branch.  By default, all existing commits on the specified branch are
@@ -507,7 +507,7 @@ $ pachctl subscribe-commit test master --new
 	fullTimestampsFlag(subscribeCommit)
 
 	deleteCommit := &cobra.Command{
-		Use:   "delete-commit repo-name commit-id",
+		Use:   "delete-commit <repo>@<branch-or-commit>",
 		Short: "Delete an input commit.",
 		Long:  "Delete an input commit. An input is a commit which is not the output of a pipeline.",
 		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
@@ -523,7 +523,7 @@ $ pachctl subscribe-commit test master --new
 	var branchProvenance cmdutil.RepeatedStringArg
 	var head string
 	createBranch := &cobra.Command{
-		Use:   "create-branch <repo-name> <branch-name> [flags]",
+		Use:   "create-branch <repo>@<branch-or-commit>",
 		Short: "Create a new branch, or update an existing branch, on a repo.",
 		Long:  "Create a new branch, or update an existing branch, on a repo, starting a commit on the branch will also create it, so there's often no need to call this.",
 		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
@@ -543,7 +543,7 @@ $ pachctl subscribe-commit test master --new
 	createBranch.Flags().StringVarP(&head, "head", "", "", "The head of the newly created branch.")
 
 	listBranch := &cobra.Command{
-		Use:   "list-branch repo-name",
+		Use:   "list-branch <repo>",
 		Short: "Return all branches on a repo.",
 		Long:  "Return all branches on a repo.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
@@ -574,7 +574,7 @@ $ pachctl subscribe-commit test master --new
 	rawFlag(listBranch)
 
 	setBranch := &cobra.Command{
-		Use:   "set-branch repo-name commit-id/branch-name new-branch-name",
+		Use:   "set-branch <repo>@<branch-or-commit> <new-branch>",
 		Short: "DEPRECATED Set a commit and its ancestors to a branch",
 		Long: `DEPRECATED Set a commit and its ancestors to a branch.
 
@@ -599,7 +599,7 @@ $ pachctl set-branch foo test master` + codeend,
 	}
 
 	deleteBranch := &cobra.Command{
-		Use:   "delete-branch repo-name branch-name",
+		Use:   "delete-branch <repo>@<branch-or-commit>",
 		Short: "Delete a branch",
 		Long:  "Delete a branch, while leaving the commits intact",
 		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
@@ -634,7 +634,7 @@ Files can be read from finished commits with get-file.
 	var putFileCommit bool
 	var overwrite bool
 	putFile := &cobra.Command{
-		Use:   "put-file repo-name branch [path/to/file/in/pfs]",
+		Use:   "put-file <repo>@<branch-or-commit>[:<path/in/pfs>]",
 		Short: "Put a file into the filesystem.",
 		Long: `Put-file supports a number of ways to insert data into pfs:
 ` + codestart + `# Put data from stdin as repo/branch/path:
@@ -788,7 +788,7 @@ $ pachctl put-file repo branch -i http://host/path
 	putFile.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "Overwrite the existing content of the file, either from previous commits or previous calls to put-file within this commit.")
 
 	copyFile := &cobra.Command{
-		Use:   "copy-file src-repo src-commit src-path dst-repo dst-commit dst-path",
+		Use:   "copy-file <src-repo>@<src-branch-or-commit>:<src-path> <dst-repo>@<dst-branch-or-commit>:<dst-path>",
 		Short: "Copy files between pfs paths.",
 		Long:  "Copy files between pfs paths.",
 		Run: cmdutil.RunFixedArgs(6, func(args []string) (retErr error) {
@@ -804,7 +804,7 @@ $ pachctl put-file repo branch -i http://host/path
 
 	var outputPath string
 	getFile := &cobra.Command{
-		Use:   "get-file repo-name commit-id path/to/file",
+		Use:   "get-file <repo>@<branch-or-commit>:<path/in/pfs>",
 		Short: "Return the contents of a file.",
 		Long: `Return the contents of a file.
 ` + codestart + `# get file "XXX" on branch "master" in repo "foo"
@@ -851,7 +851,7 @@ $ pachctl get-file foo master^2 XXX
 	getFile.Flags().IntVarP(&parallelism, "parallelism", "p", DefaultParallelism, "The maximum number of files that can be downloaded in parallel")
 
 	inspectFile := &cobra.Command{
-		Use:   "inspect-file repo-name commit-id path/to/file",
+		Use:   "inspect-file <repo>@<branch-or-commit>:<path/in/pfs>",
 		Short: "Return info about a file.",
 		Long:  "Return info about a file.",
 		Run: cmdutil.RunFixedArgs(3, func(args []string) error {
@@ -877,7 +877,7 @@ $ pachctl get-file foo master^2 XXX
 
 	var history int64
 	listFile := &cobra.Command{
-		Use:   "list-file repo-name commit-id path/to/dir",
+		Use:   "list-file <repo>@<branch-or-commit>:<path/in/pfs>",
 		Short: "Return the files in a directory.",
 		Long: `Return the files in a directory.
 
@@ -933,7 +933,7 @@ $ pachctl list-file foo master --history -1
 	listFile.Flags().Int64Var(&history, "history", 0, "Return revision history for files.")
 
 	globFile := &cobra.Command{
-		Use:   "glob-file repo-name commit-id pattern",
+		Use:   "glob-file <repo>@<branch-or-commit>:<pattern>",
 		Short: "Return files that match a glob pattern in a commit.",
 		Long: `Return files that match a glob pattern in a commit (that is, match a glob pattern
 in a repo at the state represented by a commit). Glob patterns are
@@ -979,7 +979,7 @@ $ pachctl glob-file foo master "data/*"
 
 	var shallow bool
 	diffFile := &cobra.Command{
-		Use:   "diff-file new-repo-name new-commit-id new-path [old-repo-name old-commit-id old-path]",
+		Use:   "diff-file <new-repo>@<new-branch-or-commit>:<new-path> [<old-repo>@<old-branch-or-commit>:<old-path>]",
 		Short: "Return a diff of two file trees.",
 		Long: `Return a diff of two file trees.
 
@@ -1037,7 +1037,7 @@ $ pachctl diff-file foo master path1 bar master path2
 	diffFile.Flags().BoolVarP(&shallow, "shallow", "s", false, "Specifies whether or not to diff subdirectories")
 
 	deleteFile := &cobra.Command{
-		Use:   "delete-file repo-name commit-id path/to/file",
+		Use:   "delete-file <repo>@<branch-or-commit>:<path/in/pfs>",
 		Short: "Delete a file.",
 		Long:  "Delete a file.",
 		Run: cmdutil.RunFixedArgs(3, func(args []string) error {
@@ -1051,7 +1051,7 @@ $ pachctl diff-file foo master path1 bar master path2
 	}
 
 	getObject := &cobra.Command{
-		Use:   "get-object hash",
+		Use:   "get-object <hash>",
 		Short: "Return the contents of an object",
 		Long:  "Return the contents of an object",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
@@ -1065,7 +1065,7 @@ $ pachctl diff-file foo master path1 bar master path2
 	}
 
 	getTag := &cobra.Command{
-		Use:   "get-tag tag",
+		Use:   "get-tag <tag>",
 		Short: "Return the contents of a tag",
 		Long:  "Return the contents of a tag",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
@@ -1081,7 +1081,7 @@ $ pachctl diff-file foo master path1 bar master path2
 	var debug bool
 	var commits cmdutil.RepeatedStringArg
 	mount := &cobra.Command{
-		Use:   "mount path/to/mount/point",
+		Use:   "mount <path/to/mount/point>",
 		Short: "Mount pfs locally. This command blocks.",
 		Long:  "Mount pfs locally. This command blocks.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
@@ -1105,10 +1105,10 @@ $ pachctl diff-file foo master path1 bar master path2
 		}),
 	}
 	mount.Flags().BoolVarP(&debug, "debug", "d", false, "Turn on debug messages.")
-	mount.Flags().VarP(&commits, "commits", "c", "Commits to mount for repos, arguments should be of the form \"repo:commit\"")
+	mount.Flags().VarP(&commits, "commits", "c", "Commits to mount for repos, arguments should be of the form \"repo@commit\"")
 
 	unmount := &cobra.Command{
-		Use:   "unmount path/to/mount/point",
+		Use:   "unmount <path/to/mount/point>",
 		Short: "Unmount pfs.",
 		Long:  "Unmount pfs.",
 		Run: cmdutil.RunBoundedArgs(0, 1, func(args []string) error {
@@ -1213,9 +1213,9 @@ $ pachctl diff-file foo master path1 bar master path2
 func parseCommits(args []string) (map[string]string, error) {
 	result := make(map[string]string)
 	for _, arg := range args {
-		split := strings.Split(arg, ":")
+		split := strings.Split(arg, "@")
 		if len(split) != 2 {
-			return nil, fmt.Errorf("malformed input %s, must be of the form repo:commit", args)
+			return nil, fmt.Errorf("malformed input %s, must be of the form repo@commit", args)
 		}
 		result[split[0]] = split[1]
 	}

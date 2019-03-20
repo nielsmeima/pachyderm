@@ -32,7 +32,7 @@ func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
 
 	var duration time.Duration
 	profile := &cobra.Command{
-		Use:   "debug-profile profile",
+		Use:   "debug-profile <profile>",
 		Short: "Return a profile from the server.",
 		Long:  "Return a profile from the server.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
@@ -63,7 +63,7 @@ func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
 	var profileFile string
 	var binaryFile string
 	pprof := &cobra.Command{
-		Use:   "debug-pprof profile",
+		Use:   "debug-pprof <profile>",
 		Short: "Analyze a profile of pachd in pprof.",
 		Long:  "Analyze a profile of pachd in pprof.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {

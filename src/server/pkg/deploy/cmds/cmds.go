@@ -514,7 +514,7 @@ particular backend, run "pachctl deploy storage <backend>"`,
 	}
 
 	exportImages := &cobra.Command{
-		Use:   "export-images output-file",
+		Use:   "export-images <output-file>",
 		Short: "Export a tarball (to stdout) containing all of the images in a deployment.",
 		Long:  "Export a tarball (to stdout) containing all of the images in a deployment.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) (retErr error) {
@@ -532,7 +532,7 @@ particular backend, run "pachctl deploy storage <backend>"`,
 	}
 
 	importImages := &cobra.Command{
-		Use:   "import-images input-file",
+		Use:   "import-images <input-file>",
 		Short: "Import a tarball (from stdin) containing all of the images in a deployment and push them to a private registry.",
 		Long:  "Import a tarball (from stdin) containing all of the images in a deployment and push them to a private registry.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) (retErr error) {
@@ -550,7 +550,7 @@ particular backend, run "pachctl deploy storage <backend>"`,
 	}
 
 	deploy := &cobra.Command{
-		Use:   "deploy amazon|google|microsoft|local|custom|storage",
+		Use:   "deploy (amazon|google|microsoft|local|custom|storage)",
 		Short: "Deploy a Pachyderm cluster.",
 		Long:  "Deploy a Pachyderm cluster.",
 		PersistentPreRun: cmdutil.Run(func([]string) error {

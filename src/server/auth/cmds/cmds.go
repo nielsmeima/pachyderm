@@ -261,7 +261,7 @@ func WhoamiCmd(noMetrics, noPortForwarding *bool) *cobra.Command {
 // determine whether the specified user has access to the specified repo.
 func CheckCmd(noMetrics, noPortForwarding *bool) *cobra.Command {
 	check := &cobra.Command{
-		Use:   "check (none|reader|writer|owner) repo",
+		Use:   "check (none|reader|writer|owner) <repo>",
 		Short: "Check whether you have reader/writer/etc-level access to 'repo'",
 		Long: "Check whether you have reader/writer/etc-level access to 'repo'. " +
 			"For example, 'pachctl auth check reader private-data' prints \"true\" " +
@@ -298,7 +298,7 @@ func CheckCmd(noMetrics, noPortForwarding *bool) *cobra.Command {
 // repo or another user's scope of access to that repo
 func GetCmd(noMetrics, noPortForwarding *bool) *cobra.Command {
 	setScope := &cobra.Command{
-		Use:   "get [username] repo",
+		Use:   "get [<username>] <repo>",
 		Short: "Get the ACL for 'repo' or the access that 'username' has to 'repo'",
 		Long: "Get the ACL for 'repo' or the access that 'username' has to " +
 			"'repo'. For example, 'pachctl auth get github-alice private-data' " +
@@ -345,7 +345,7 @@ func GetCmd(noMetrics, noPortForwarding *bool) *cobra.Command {
 // that another user has to a repo
 func SetScopeCmd(noMetrics, noPortForwarding *bool) *cobra.Command {
 	setScope := &cobra.Command{
-		Use:   "set username (none|reader|writer|owner) repo",
+		Use:   "set <username> (none|reader|writer|owner) <repo>",
 		Short: "Set the scope of access that 'username' has to 'repo'",
 		Long: "Set the scope of access that 'username' has to 'repo'. For " +
 			"example, 'pachctl auth set github-alice none private-data' prevents " +
@@ -443,7 +443,7 @@ func ModifyAdminsCmd(noMetrics, noPortForwarding *bool) *cobra.Command {
 func GetAuthTokenCmd(noMetrics, noPortForwarding *bool) *cobra.Command {
 	var quiet bool
 	getAuthToken := &cobra.Command{
-		Use:   "get-auth-token username",
+		Use:   "get-auth-token <username>",
 		Short: "Get an auth token that authenticates the holder as \"username\"",
 		Long: "Get an auth token that authenticates the holder as \"username\"; " +
 			"this can only be called by cluster admins",

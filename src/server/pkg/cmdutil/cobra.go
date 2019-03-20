@@ -56,13 +56,13 @@ func ErrorAndExit(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
-// ParseCommits takes a slice of arguments of the form "repo/commit-id" or
+// ParseCommits takes a slice of arguments of the form "repo@branch-or-commit" or
 // "repo" (in which case we consider the commit ID to be empty), and returns
 // a list of *pfs.Commits
 func ParseCommits(args []string) ([]*pfs.Commit, error) {
 	var commits []*pfs.Commit
 	for _, arg := range args {
-		parts := strings.SplitN(arg, "/", 2)
+		parts := strings.SplitN(arg, "@", 2)
 		hasRepo := len(parts) > 0 && parts[0] != ""
 		hasCommit := len(parts) == 2 && parts[1] != ""
 		if hasCommit && !hasRepo {
