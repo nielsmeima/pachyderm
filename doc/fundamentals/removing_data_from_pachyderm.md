@@ -25,7 +25,7 @@ pipeline subscribed to it are likely to fail or produce bad downstream output.
 To fix this you should use `delete-commit` as follows:
 
 ```sh
-$ pachctl delete-commit <repo> <branch-or-commit-id>
+$ pachctl delete-commit <repo>@<branch-or-commit-id>
 ```
 
 When you delete the bad commit, several things will happen (all atomically):

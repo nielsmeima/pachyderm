@@ -37,7 +37,7 @@ This task does 2 things:
 1. It grabs the data set in the form of a tarball from a URL, and extracts the data
 2. It inputs this data into Pachyderm by:
     - creating a new repo `GoT_scripts`
-    - executing a `put-file` recursively via `pachctl put-file GoT_scripts master -f ./data/ -r`
+    - executing a `put-file` recursively via `pachctl put-file GoT_scripts@master -f ./data/ -r`
 
 The result is a new repo with all the data we need stored inside. To confirm the setup, you can do:
 
@@ -194,7 +194,7 @@ By default, we've set the size of the model to train to `test`. You can see this
 Once `pachctl list-commit GoT_generate` shows a single commit, we can take a look at the output. To do so, you can run:
 
 ```
-pachctl get-file GoT_generate {the commit id from the above command} new_script.txt
+pachctl get-file GoT_generate@{the commit id from the above command}:new_script.txt
 ```
 
 And you should see some text!

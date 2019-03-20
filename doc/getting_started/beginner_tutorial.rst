@@ -46,7 +46,7 @@ Here's an example atomic commit of the file `liberty.png` to the `images` repo's
 
 .. code-block:: shell
 
-	$ pachctl put-file images master liberty.png -f http://imgur.com/46Q8nDz.png
+	$ pachctl put-file images@master:liberty.png -f http://imgur.com/46Q8nDz.png
 
 We can check to make sure the data we just added is in Pachyderm.
 
@@ -63,7 +63,7 @@ We can check to make sure the data we just added is in Pachyderm.
   images d89758a7496a4c56920b0eaa7d7d3255 <none> 29 seconds ago Less than a second 57.27KiB
   
   # And view the file in that commit
-  $ pachctl list-file images master
+  $ pachctl list-file images@master
   COMMIT                           NAME         TYPE COMMITTED          SIZE     
   d89758a7496a4c56920b0eaa7d7d3255 /liberty.png file About a minute ago 57.27KiB
 
@@ -72,10 +72,10 @@ We can also view the file we just added to Pachyderm. Since this is an image, we
 .. code-block:: shell
  
   # on macOS
-  $ pachctl get-file images master liberty.png | open -f -a /Applications/Preview.app
+  $ pachctl get-file images@master:liberty.png | open -f -a /Applications/Preview.app
 
   # on Linux
-  $ pachctl get-file images master liberty.png | display
+  $ pachctl get-file images@master:liberty.png | display
 
 Create a Pipeline
 ^^^^^^^^^^^^^^^^^
@@ -181,10 +181,10 @@ We can view the output data from the "edges" repo in the same fashion that we vi
 .. code-block:: shell
  
   # on macOS
-  $ pachctl get-file edges master liberty.png | open -f -a /Applications/Preview.app
+  $ pachctl get-file edges@master:liberty.png | open -f -a /Applications/Preview.app
 
   # on Linux
-  $ pachctl get-file edges master liberty.png | display
+  $ pachctl get-file edges@master:liberty.png | display
 
 The output should look similar to:
 
@@ -199,9 +199,9 @@ Let's create two new commits in a parental structure. To do this we will simply 
 
 .. code-block:: shell
 
-  $ pachctl put-file images master AT-AT.png -f http://imgur.com/8MN9Kg0.png
+  $ pachctl put-file images@master:AT-AT.png -f http://imgur.com/8MN9Kg0.png
 
-  $ pachctl put-file images master kitten.png -f http://imgur.com/g2QnNqa.png
+  $ pachctl put-file images@master:kitten.png -f http://imgur.com/g2QnNqa.png
 
 Adding a new commit of data will automatically trigger the pipeline to run on the new data we've added. We'll see corresponding jobs get started and commits to the output "edges" repo. Let's also view our new outputs. 
 
@@ -219,14 +219,14 @@ Adding a new commit of data will automatically trigger the pipeline to run on th
   # View the output data
 
   # on macOS
-  $ pachctl get-file edges master AT-AT.png | open -f -a /Applications/Preview.app
+  $ pachctl get-file edges@master:AT-AT.png | open -f -a /Applications/Preview.app
 
-  $ pachctl get-file edges master kitten.png | open -f -a /Applications/Preview.app
+  $ pachctl get-file edges@master:kitten.png | open -f -a /Applications/Preview.app
 
   # on Linux
-  $ pachctl get-file edges master AT-AT.png | display
+  $ pachctl get-file edges@master:AT-AT.png | display
 
-  $ pachctl get-file edges master kitten.png | display
+  $ pachctl get-file edges@master:kitten.png | display
 
 Adding Another Pipeline
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -291,10 +291,10 @@ And you can view the generated montage image via:
 .. code-block:: shell
 
   # on macOS
-  $ pachctl get-file montage master montage.png | open -f -a /Applications/Preview.app
+  $ pachctl get-file montage@master:montage.png | open -f -a /Applications/Preview.app
 
   # on Linux
-  $ pachctl get-file montage master montage.png | display
+  $ pachctl get-file montage@master:montage.png | display
 
 .. image:: montage-screenshot.png
 

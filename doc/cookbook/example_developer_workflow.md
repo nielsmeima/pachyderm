@@ -41,7 +41,7 @@ Pachyderm handles this part automatically for you, but we include it here for co
 
 When looking at a job using the ``pachctl inspect-job`` command, you can see the exact image tag that produced the commits in that job, bridging from data provenance to code provenance.
 
-``pachctl list-job`` gives you  ``--input`` and  ``--output`` flags that can be used with an argument in the form of repo/commit-id to get you complete provenance on the jobs that produced a particular commit in a particular repo.
+``pachctl list-job`` gives you  ``--input`` and  ``--output`` flags that can be used with an argument in the form of repo@branch-or-commit to get you complete provenance on the jobs that produced a particular commit in a particular repo.
 
 
 ## Summary

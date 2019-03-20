@@ -240,15 +240,15 @@ Examples:
 $ pachctl start-commit test
 
 # Start a commit in repo "test" on branch "master"
-$ pachctl start-commit test master
+$ pachctl start-commit test@master
 
 # Start a commit with "master" as the parent in repo "test", on a new branch "patch"; essentially a fork.
-$ pachctl start-commit test patch -p master
+$ pachctl start-commit test@patch -p master
 
 # Start a commit with XXX as the parent in repo "test", not on any branch
 $ pachctl start-commit test -p XXX
 ` + codeend,
-		Run: cmdutil.RunBoundedArgs(1, 2, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			cli, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -279,7 +279,7 @@ $ pachctl start-commit test -p XXX
 		Use:   "finish-commit <repo>@<branch-or-commit>",
 		Short: "Finish a started commit.",
 		Long:  "Finish a started commit. Commit-id must be a writeable commit.",
-		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			cli, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -303,7 +303,7 @@ $ pachctl start-commit test -p XXX
 		Use:   "inspect-commit <repo>@<branch-or-commit>",
 		Short: "Return info about a commit.",
 		Long:  "Return info about a commit.",
-		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -468,16 +468,16 @@ finished.
 Examples:
 
 ` + codestart + `# subscribe to commits in repo "test" on branch "master"
-$ pachctl subscribe-commit test master
+$ pachctl subscribe-commit test@master
 
 # subscribe to commits in repo "test" on branch "master", but only since commit XXX.
-$ pachctl subscribe-commit test master --from XXX
+$ pachctl subscribe-commit test@master --from XXX
 
 # subscribe to commits in repo "test" on branch "master", but only for new
 # commits created from now on.
-$ pachctl subscribe-commit test master --new
+$ pachctl subscribe-commit test@master --new
 ` + codeend,
-		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			repo, branch := args[0], args[1]
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
@@ -510,7 +510,7 @@ $ pachctl subscribe-commit test master --new
 		Use:   "delete-commit <repo>@<branch-or-commit>",
 		Short: "Delete an input commit.",
 		Long:  "Delete an input commit. An input is a commit which is not the output of a pipeline.",
-		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -526,7 +526,7 @@ $ pachctl subscribe-commit test master --new
 		Use:   "create-branch <repo>@<branch-or-commit>",
 		Short: "Create a new branch, or update an existing branch, on a repo.",
 		Long:  "Create a new branch, or update an existing branch, on a repo, starting a commit on the branch will also create it, so there's often no need to call this.",
-		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -581,13 +581,13 @@ $ pachctl subscribe-commit test master --new
 Examples:
 
 ` + codestart + `# Set commit XXX and its ancestors as branch master in repo foo.
-$ pachctl set-branch foo XXX master
+$ pachctl set-branch foo@XXX master
 
 # Set the head of branch test as branch master in repo foo.
 # After running this command, "test" and "master" both point to the
 # same commit.
-$ pachctl set-branch foo test master` + codeend,
-		Run: cmdutil.RunFixedArgs(3, func(args []string) error {
+$ pachctl set-branch foo@test master` + codeend,
+		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
 			fmt.Fprintf(os.Stderr, "set-branch is DEPRECATED, use create-branch instead.\n")
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
@@ -602,7 +602,7 @@ $ pachctl set-branch foo test master` + codeend,
 		Use:   "delete-branch <repo>@<branch-or-commit>",
 		Short: "Delete a branch",
 		Long:  "Delete a branch, while leaving the commits intact",
-		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -676,7 +676,7 @@ $ pachctl put-file repo branch -i file
 # files into your Pachyderm cluster.
 $ pachctl put-file repo branch -i http://host/path
 ` + codeend,
-		Run: cmdutil.RunBoundedArgs(2, 3, func(args []string) (retErr error) {
+		Run: cmdutil.RunBoundedArgs(1, func(args []string) (retErr error) {
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user", client.WithMaxConcurrentStreams(parallelism))
 			if err != nil {
 				return err
@@ -791,7 +791,7 @@ $ pachctl put-file repo branch -i http://host/path
 		Use:   "copy-file <src-repo>@<src-branch-or-commit>:<src-path> <dst-repo>@<dst-branch-or-commit>:<dst-path>",
 		Short: "Copy files between pfs paths.",
 		Long:  "Copy files between pfs paths.",
-		Run: cmdutil.RunFixedArgs(6, func(args []string) (retErr error) {
+		Run: cmdutil.RunFixedArgs(2, func(args []string) (retErr error) {
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user", client.WithMaxConcurrentStreams(parallelism))
 			if err != nil {
 				return err
@@ -808,17 +808,17 @@ $ pachctl put-file repo branch -i http://host/path
 		Short: "Return the contents of a file.",
 		Long: `Return the contents of a file.
 ` + codestart + `# get file "XXX" on branch "master" in repo "foo"
-$ pachctl get-file foo master XXX
+$ pachctl get-file foo@master:XXX
 
 # get file "XXX" in the parent of the current head of branch "master"
 # in repo "foo"
-$ pachctl get-file foo master^ XXX
+$ pachctl get-file foo@master^:XXX
 
 # get file "XXX" in the grandparent of the current head of branch "master"
 # in repo "foo"
-$ pachctl get-file foo master^2 XXX
+$ pachctl get-file foo@master^2:XXX
 ` + codeend,
-		Run: cmdutil.RunFixedArgs(3, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -854,7 +854,7 @@ $ pachctl get-file foo master^2 XXX
 		Use:   "inspect-file <repo>@<branch-or-commit>:<path/in/pfs>",
 		Short: "Return info about a file.",
 		Long:  "Return info about a file.",
-		Run: cmdutil.RunFixedArgs(3, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -884,26 +884,26 @@ $ pachctl get-file foo master^2 XXX
 Examples:
 
 ` + codestart + `# list top-level files on branch "master" in repo "foo"
-$ pachctl list-file foo master
+$ pachctl list-file foo@master
 
 # list files under directory "dir" on branch "master" in repo "foo"
-$ pachctl list-file foo master dir
+$ pachctl list-file foo@master:dir
 
 # list top-level files in the parent commit of the current head of "master"
 # in repo "foo"
-$ pachctl list-file foo master^
+$ pachctl list-file foo@master^
 
 # list top-level files in the grandparent of the current head of "master"
 # in repo "foo"
-$ pachctl list-file foo master^2
+$ pachctl list-file foo@master^2
 
 # list the last n versions of top-level files on branch "master" in repo "foo"
-$ pachctl list-file foo master --history n
+$ pachctl list-file foo@master --history n
 
 # list all versions of top-level files on branch "master" in repo "foo"
-$ pachctl list-file foo master --history -1
+$ pachctl list-file foo@master --history -1
 ` + codeend,
-		Run: cmdutil.RunBoundedArgs(2, 3, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -942,14 +942,14 @@ documented [here](https://golang.org/pkg/path/filepath/#Match).
 Examples:
 
 ` + codestart + `# Return files in repo "foo" on branch "master" that start
-# with the character "A".  Note how the double quotation marks around "A*" are
-# necessary because otherwise your shell might interpret the "*".
-$ pachctl glob-file foo master "A*"
+# with the character "A".  Note how the double quotation marks around the 
+# parameter are necessary because otherwise your shell might interpret the "*".
+$ pachctl glob-file "foo@master:A*"
 
 # Return files in repo "foo" on branch "master" under directory "data".
-$ pachctl glob-file foo master "data/*"
+$ pachctl glob-file "foo@master:data/*"
 ` + codeend,
-		Run: cmdutil.RunFixedArgs(3, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -985,13 +985,15 @@ $ pachctl glob-file foo master "data/*"
 
 Examples:
 
-` + codestart + `# Return the diff between foo master path and its parent.
-$ pachctl diff-file foo master path
+` + codestart + `# Return the diff of the file "path" of the repo "foo" between the head of the
+# "master" branch and its parent.
+$ pachctl diff-file foo@master:path
 
-# Return the diff between foo master path1 and bar master path2.
-$ pachctl diff-file foo master path1 bar master path2
+# Return the diff between the master branches of repos foo and bar at paths
+# path1 and path2, respectively.
+$ pachctl diff-file foo@master:path1 bar@master:path2
 ` + codeend,
-		Run: cmdutil.RunBoundedArgs(3, 6, func(args []string) error {
+		Run: cmdutil.RunBoundedArgs(1, 2, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -1040,7 +1042,7 @@ $ pachctl diff-file foo master path1 bar master path2
 		Use:   "delete-file <repo>@<branch-or-commit>:<path/in/pfs>",
 		Short: "Delete a file.",
 		Long:  "Delete a file.",
-		Run: cmdutil.RunFixedArgs(3, func(args []string) error {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err

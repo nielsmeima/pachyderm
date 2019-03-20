@@ -63,7 +63,7 @@ To get this data into Pachyderm, navigate to this directory and run:
 
 ```
 $ cd data
-$ pachctl put-file training master -f iris.csv
+$ pachctl put-file training@master -f iris.csv
 ```
 
 Then, you should be able to see the following:
@@ -73,7 +73,7 @@ $ pachctl list-repo
 NAME                CREATED             SIZE
 training            3 minutes ago       4.444 KiB
 attributes          3 minutes ago       0 B
-$ pachctl list-file training master
+$ pachctl list-file training@master
 NAME                TYPE                SIZE
 iris.csv            file                4.444 KiB
 ```
@@ -123,7 +123,7 @@ NAME                CREATED             SIZE
 model               2 minutes ago       43.67 KiB
 training            8 minutes ago       4.444 KiB
 attributes          7 minutes ago       0 B
-$ pachctl list-file model master
+$ pachctl list-file model@master
 NAME                TYPE                SIZE
 model.jld           file                43.67 KiB
 ```
@@ -136,13 +136,13 @@ Great! We now have a trained model that will infer the species of iris flowers. 
 
 ```
 $ cd data/test/
-$ pachctl put-file attributes master -r -f .
+$ pachctl put-file attributes@master -r -f .
 ```
 
 You should then see:
 
 ```
-$ pachctl list-file attributes master
+$ pachctl list-file attributes@master
 NAME                TYPE                SIZE
 1.csv               file                16 B
 2.csv               file                96 B
@@ -187,13 +187,13 @@ training            13 minutes ago       4.444 KiB
 We have created results from the inference, but how do we examine those results?  There are multiple ways, but an easy way is to just "get" the specific files out of Pachyderm's data versioning:
 
 ```
-$ pachctl list-file inference master
+$ pachctl list-file inference@master
 NAME            TYPE                SIZE
 1               file                15 B
 2               file                85 B
-$ pachctl get-file inference master 1
+$ pachctl get-file inference@master:1
 Iris-virginica
-$ pachctl get-file inference master 2
+$ pachctl get-file inference@master:2
 Iris-versicolor
 Iris-virginica
 Iris-virginica
@@ -278,7 +278,7 @@ a139434b1b554443aceaf1424f119242 inference/15ef7bfe8e7d4df18a77f35b0019e119 9 mi
 Let's say that one or more observations in our training data set were corrupt or unwanted.  Thus, we want to update our training data set.  To simulate this, go ahead and open up `iris.csv` (e.g., with `vim`) and remove a couple of the rows (non-header rows).  Then, let's replace our training set (`-o` tells Pachyderm to overwrite the file):
 
 ```
-$ pachctl put-file training master -o -f ./data/iris.csv
+$ pachctl put-file training@master -o -f ./data/iris.csv
 ```
 
 Immediately, Pachyderm "knows" that the data has been updated, and it starts new jobs to update the model and inferences.
@@ -303,7 +303,7 @@ a139434b1b554443aceaf1424f119242 inference/15ef7bfe8e7d4df18a77f35b0019e119 12 m
 If we want to know which model and training data set was used for the latest inference, commit id `be361c6b2c294aaea72ed18cbcfda644`, we just need to inspect the particular commit:
 
 ```
-$ pachctl inspect-commit inference be361c6b2c294aaea72ed18cbcfda644
+$ pachctl inspect-commit inference@be361c6b2c294aaea72ed18cbcfda644
 Commit: inference/be361c6b2c294aaea72ed18cbcfda644
 Parent: 2e9d4707aadc4a9f82ef688ec11505c4
 Started: 3 minutes ago
@@ -315,7 +315,7 @@ Provenance:  attributes/2757a902762e456a89852821069a33aa  model/adb293f8a4604ed7
 The `Provenance` tells us exactly which model and training set was used (along with which commit to attributes triggered the inference).  For example, if we wanted to see the exact model used, we would just need to reference commit `adb293f8a4604ed7b081c1ff030c0480` to the `model` repo:
 
 ```
-$ pachctl list-file model adb293f8a4604ed7b081c1ff030c0480
+$ pachctl list-file model@adb293f8a4604ed7b081c1ff030c0480
 NAME                TYPE                SIZE
 model.pkl           file                3.448KiB
 model.txt           file                226B

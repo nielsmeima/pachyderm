@@ -13,13 +13,13 @@ Every commit of new images into the "images" data repository results in a corres
 The `pachctl` CLI tool [command `get-file`](../pachctl/pachctl_get-file.html) can be used to get versioned data out of any data repository:
 
 ```sh
-pachctl get-file <repo> <commit-id or branch> path/to/file
+pachctl get-file <repo>@<branch-or-commit>:path/to/file
 ```
 
 In the case of the OpenCV pipeline, we could get out an image named `example_pic.jpg`:
 
 ```sh
-pachctl get-file edges master example_pic.jpg
+pachctl get-file edges@master:example_pic.jpg
 ```
 
 But how do we know which files to get?  Of course we can use the `pachctl list-file` command to see what files are available.  But how do we know which results are the latest, came from certain input, etc.?  In this case, we would like to know which edge detected images in the `edges` repo come from which input images in the `images` repo.  This is where provenance and the `flush-commit` command come in handy.
@@ -46,7 +46,7 @@ edges               754542b89c1c47a5b657e60381c06c71   <none>                   
 In this case, we have one output commit per input commit on `images`.  However, this might get more complicated for pipelines with multiple branches, multiple PFS inputs, etc.  To confirm which commits correspond to which outputs, we can use `flush-commit`.  In particular, we can call `flush-commit` on any one of our commits into `images` to see which output came from this particular commit:
 
 ```sh
-$ pachctl flush-commit images/a9678d2a439648c59636688945f3c6b5
+$ pachctl flush-commit images@a9678d2a439648c59636688945f3c6b5
 REPO                ID                                 PARENT                             STARTED             DURATION             SIZE                
 edges               026536b547a44a8daa2db9d25bf88b79   754542b89c1c47a5b657e60381c06c71   3 minutes ago       Less than a second   133.6 KiB
 ```

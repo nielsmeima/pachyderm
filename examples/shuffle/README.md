@@ -5,15 +5,15 @@ This example demonstrates how shuffle pipelines i.e. a pipeline that shuffles, c
 ## Create fruits input repo
 ```bash
 pachctl create-repo fruits
-pachctl put-file fruits master -f mango.jpeg
-pachctl put-file fruits master -f apple.jpeg
+pachctl put-file fruits@master -f mango.jpeg
+pachctl put-file fruits@master -f apple.jpeg
 ```
 
 ## Create pricing input repo
 ```bash
 pachctl create-repo pricing
-pachctl put-file pricing master -f mango.json
-pachctl put-file pricing master -f apple.json
+pachctl put-file pricing@master -f mango.json
+pachctl put-file pricing@master -f apple.json
 ```
 
 
@@ -79,7 +79,7 @@ content, specifying `"empty_files"` will massively improve its performance.
 
 
 ### Output files:
-`pachctl list-file shuffle master "*"` will show shuffled file:
+`pachctl list-file "shuffle@master:*"` will show shuffled file:
 
 | NAME             | TYPE | SIZE     |
 |------------------|------|----------|

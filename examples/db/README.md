@@ -215,16 +215,16 @@ This will allow us to view the head of the output over time to see a bunch of ra
 3. You can then see the output changing over time.  You can watch it change with each query by executing:
 
     ```sh
-    $ watch pachctl get-file query master output.json
+    $ watch pachctl get-file query@master:output.json
     ```
     
     Or you can look at individual results over time via the commit IDs:
 
     ```sh
-    $ pachctl get-file query master output.json
+    $ pachctl get-file query@master:output.json
     { "_id" : ObjectId("59a455af69a077c0dc028410"), "address" : { "building" : "119", "coord" : [ -73.9784962, 40.6788476 ], "street" : "5 Avenue", "zipcode" : "11217" }, "borough" : "Brooklyn", "cuisine" : "Mexican", "grades" : [ { "date" : ISODate("2014-07-29T00:00:00Z"), "grade" : "B", "score" : 27 }, { "date" : ISODate("2014-03-10T00:00:00Z"), "grade" : "B", "score" : 15 }, { "date" : ISODate("2014-02-12T00:00:00Z"), "grade" : "P", "score" : 3 }, { "date" : ISODate("2013-09-05T00:00:00Z"), "grade" : "C", "score" : 35 }, { "date" : ISODate("2013-03-06T00:00:00Z"), "grade" : "A", "score" : 12 }, { "date" : ISODate("2012-09-12T00:00:00Z"), "grade" : "A", "score" : 13 }, { "date" : ISODate("2012-04-17T00:00:00Z"), "grade" : "A", "score" : 12 } ], "name" : "El Pollito Mexicano", "restaurant_id" : "41051406" }
-    $ pachctl get-file query 64ac2bd721d04212a3a0b90833f751e5 output.json
+    $ pachctl get-file query@64ac2bd721d04212a3a0b90833f751e5:output.json
     { "_id" : ObjectId("59a455f069a077c0dc02e16e"), "address" : { "building" : "1650", "coord" : [ -73.928079, 40.856481 ], "street" : "Saint Nicholas Ave", "zipcode" : "10040" }, "borough" : "Manhattan", "cuisine" : "Spanish", "grades" : [ { "date" : ISODate("2015-01-20T00:00:00Z"), "grade" : "Not Yet Graded", "score" : 2 } ], "name" : "Angebienvendia", "restaurant_id" : "50018661" }
-    $ pachctl get-file query 74a6cf68de2047fe94ac7982065df03d output.json
+    $ pachctl get-file query@74a6cf68de2047fe94ac7982065df03d:output.json
     { "_id" : ObjectId("59a455b669a077c0dc02904d"), "address" : { "building" : "14", "coord" : [ -73.990382, 40.741571 ], "street" : "West   23 Street", "zipcode" : "10010" }, "borough" : "Manhattan", "cuisine" : "Café/Coffee/Tea", "grades" : [ { "date" : ISODate("2014-05-02T00:00:00Z"), "grade" : "A", "score" : 11 }, { "date" : ISODate("2013-11-22T00:00:00Z"), "grade" : "A", "score" : 8 }, { "date" : ISODate("2012-11-20T00:00:00Z"), "grade" : "A", "score" : 9 }, { "date" : ISODate("2011-11-18T00:00:00Z"), "grade" : "A", "score" : 6 } ], "name" : "Starbucks Coffee (Store #13539)", "restaurant_id" : "41290548" }
     ```

@@ -150,5 +150,5 @@ docker.test.clean: docker.container.clean docker.test.env.clean
 # Display some information about the pipeline
 verify:
 	pachctl inspect-pipeline $(PIPELINE_NAME); \
-	pachctl list-file $(PIPELINE_NAME) master
+	pachctl list-file $(PIPELINE_NAME)@master
 

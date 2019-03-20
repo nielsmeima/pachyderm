@@ -36,7 +36,7 @@ started and finished.
 
 Let's start a new commit in the “urls” repo:
 ```shell
-$ pachctl start-commit urls master
+$ pachctl start-commit urls@master
 master/0
 ```
 
@@ -53,7 +53,7 @@ We're going to write that data as a file called “urls” in pfs.
 
 ```shell
 # Write sample data into pfs
-$ cat examples/scraper/urls | pachctl put-file urls master/0 urls
+$ cat examples/scraper/urls | pachctl put-file urls@master/0:urls
 ```
 
 ## Finish a Commit
@@ -63,13 +63,13 @@ This prevents reads from racing with writes. Furthermore, every write
 to pfs is atomic. Now let's finish the commit:
 
 ```shell
-$ pachctl finish-commit urls master/0
+$ pachctl finish-commit urls@master/0
 ```
 
 Now we can view the file:
 
 ```shell
-$ pachctl get-file urls master/0 urls
+$ pachctl get-file urls@master/0:urls
 www.google.com
 www.reddit.com
 www.imgur.com
@@ -166,8 +166,8 @@ name where it stores its output results. In our example, the pipeline was named 
 There are a couple of different ways to retrieve the output. We can read a single output file from the “scraper” `repo` in the same fashion that we read the input data:
 
 ```shell
-$ pachctl list-file scraper 2b43def9b52b4fdfadd95a70215e90c9 urls
-$ pachctl get-file scraper 2b43def9b52b4fdfadd95a70215e90c9 urls/www.imgur.com/index.html
+$ pachctl list-file scraper@2b43def9b52b4fdfadd95a70215e90c9:urls
+$ pachctl get-file scraper@2b43def9b52b4fdfadd95a70215e90c9:urls/www.imgur.com/index.html
 ```
 
 Using `get-file` is good if you know exactly what file you’re looking for, but for this example we want to just see all the scraped pages. One great way to do this is to mount the distributed file system locally and then just poke around.
@@ -224,19 +224,19 @@ more data to the same file “urls.”
 Let's create a new commit with our previous commit as the parent:
 
 ```shell
-$ pachctl start-commit urls master
+$ pachctl start-commit urls@master
 master/1
 ```
 
 Append more data to our urls file in the new commit:
 ```shell
-$ cat examples/scraper/urls2 | pachctl put-file urls master/1 urls
+$ cat examples/scraper/urls2 | pachctl put-file urls@master/1:urls
 ```
 Finally, we'll want to finish our second commit. After it's finished, we can
 read “scraper” from the latest commit to see all the scrapes.
 
 ```shell
-$ pachctl finish-commit urls master1
+$ pachctl finish-commit urls@master/1
 ```
 Finishing this commit will also automatically trigger the pipeline to run on
 the new data we've added. We'll see a corresponding commit to the output

@@ -11,6 +11,6 @@ do
 	if [ "$f" != "load.sh" ]
 	then
 		echo $f
-		pachctl put-file $REPO master $f -c -f $f
+		pachctl put-file $REPO@master:$f -c -f $f
 	fi
 done
