@@ -56,46 +56,105 @@ func ErrorAndExit(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
-// ParseCommits takes a slice of arguments of the form "repo@branch-or-commit" or
-// "repo" (in which case we consider the commit ID to be empty), and returns
-// a list of *pfs.Commits
-func ParseCommits(args []string) ([]*pfs.Commit, error) {
-	var commits []*pfs.Commit
-	for _, arg := range args {
-		parts := strings.SplitN(arg, "@", 2)
-		hasRepo := len(parts) > 0 && parts[0] != ""
-		hasCommit := len(parts) == 2 && parts[1] != ""
-		if hasCommit && !hasRepo {
-			return nil, fmt.Errorf("invalid commit id \"%s\": repo cannot be empty", arg)
-		}
-		commit := &pfs.Commit{
-			Repo: &pfs.Repo{
-				Name: parts[0],
-			},
-		}
-		if len(parts) == 2 {
-			commit.ID = parts[1]
-		} else {
-			commit.ID = ""
-		}
-		commits = append(commits, commit)
+// ParseCommit takes an argument of the form "repo[@branch-or-commit]" and
+// returns the corresponding *pfs.Commit.
+func ParseCommit(arg string) (*pfs.Commit, error) {
+	parts := strings.SplitN(arg, "@", 2)
+	if parts[0] == "" {
+		return nil, fmt.Errorf("invalid format \"%s\": repo cannot be empty", arg)
 	}
-	return commits, nil
+	commit := &pfs.Commit{
+		Repo: &pfs.Repo{
+			Name: parts[0],
+		},
+		ID: "",
+	}
+	if len(parts) == 2 {
+		commit.ID = parts[1]
+	}
+	return commit, nil
 }
 
-// ParseBranches takes a slice of arguments of the form "repo/branch-name" or
-// "repo" (in which case we consider the branch name to be empty), and returns
-// a list of *pfs.Branches
-func ParseBranches(args []string) ([]*pfs.Branch, error) {
-	commits, err := ParseCommits(args)
+// ParseCommits converts all arguments to *pfs.Commit structs using the
+// semantics of ParseCommit
+func ParseCommits(args []string) ([]*pfs.Commit, error) {
+	var results []*pfs.Commit
+	for _, arg := range args {
+		commit, err := ParseCommit(arg)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, commit)
+	}
+	return results, nil
+}
+
+// ParseBranch takes an argument of the form "repo[@branch]" and
+// returns the corresponding *pfs.Branch.  This uses ParseBranch under the hood
+// because a branch name is usually interchangeable with a commit-id.
+func ParseBranch(arg string) (*pfs.Branch, error) {
+	commit, err := ParseCommit(arg)
 	if err != nil {
 		return nil, err
 	}
-	var result []*pfs.Branch
-	for _, commit := range commits {
-		result = append(result, &pfs.Branch{Repo: commit.Repo, Name: commit.ID})
+	return &pfs.Branch{Repo: commit.Repo, Name: commit.ID}, nil
+}
+
+// ParseBranches converts all arguments to *pfs.Commit structs using the
+// semantics of ParseBranch
+func ParseBranches(args []string) ([]*pfs.Branch, error) {
+	var results []*pfs.Branch
+	for _, arg := range args {
+		branch, err := ParseBranch(arg)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, branch)
 	}
-	return result, nil
+	return results, nil
+}
+
+// ParseFile takes an argument of the form "repo[@branch-or-commit[:path]]", and
+// returns the corresponding *pfs.File.
+func ParseFile(arg string) (*pfs.File, error) {
+	repoAndRest := strings.SplitN(arg, "@", 2)
+	if repoAndRest[0] == "" {
+		return nil, fmt.Errorf("invalid format \"%s\": repo cannot be empty", arg)
+	}
+	file := &pfs.File{
+		Commit: &pfs.Commit{
+			Repo: &pfs.Repo{
+				Name: repoAndRest[0],
+			},
+			ID: "",
+		},
+		Path: "",
+	}
+	if len(repoAndRest) > 1 {
+		commitAndPath := strings.SplitN(repoAndRest[1], ":", 2)
+		if commitAndPath[0] == "" {
+			return nil, fmt.Errorf("invalid format \"%s\": commit cannot be empty", arg)
+		}
+		file.Commit.ID = commitAndPath[0]
+		if len(commitAndPath) > 1 {
+			file.Path = commitAndPath[1]
+		}
+	}
+	return file, nil
+}
+
+// ParseFiles converts all arguments to *pfs.Commit structs using the
+// semantics of ParseFile
+func ParseFiles(args []string) ([]*pfs.File, error) {
+	var results []*pfs.File
+	for _, arg := range args {
+		commit, err := ParseFile(arg)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, commit)
+	}
+	return results, nil
 }
 
 // RepeatedStringArg is an alias for []string

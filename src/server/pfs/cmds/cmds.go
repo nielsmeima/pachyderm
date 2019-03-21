@@ -249,19 +249,19 @@ $ pachctl start-commit test@patch -p master
 $ pachctl start-commit test -p XXX
 ` + codeend,
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+			branch, err := cmdutil.ParseBranch(args[0])
+			if err != nil {
+				return err
+			}
 			cli, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer cli.Close()
-			var branch string
-			if len(args) == 2 {
-				branch = args[1]
-			}
 			commit, err := cli.PfsAPIClient.StartCommit(cli.Ctx(),
 				&pfsclient.StartCommitRequest{
-					Branch:      branch,
-					Parent:      client.NewCommit(args[0], parent),
+					Branch:      branch.Name,
+					Parent:      client.NewCommit(branch.Repo.Name, parent),
 					Description: description,
 				})
 			if err != nil {
@@ -280,6 +280,10 @@ $ pachctl start-commit test -p XXX
 		Short: "Finish a started commit.",
 		Long:  "Finish a started commit. Commit-id must be a writeable commit.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+			commit, err := cmdutil.ParseCommit(args[0])
+			if err != nil {
+				return err
+			}
 			cli, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -288,12 +292,12 @@ $ pachctl start-commit test -p XXX
 			if description != "" {
 				_, err := cli.PfsAPIClient.FinishCommit(cli.Ctx(),
 					&pfsclient.FinishCommitRequest{
-						Commit:      client.NewCommit(args[0], args[1]),
+						Commit:      commit,
 						Description: description,
 					})
 				return grpcutil.ScrubGRPC(err)
 			}
-			return cli.FinishCommit(args[0], args[1])
+			return cli.FinishCommit(commit.Repo.Name, commit.ID)
 		}),
 	}
 	finishCommit.Flags().StringVarP(&description, "message", "m", "", "A description of this commit's contents (overwrites any existing commit description)")
@@ -304,17 +308,22 @@ $ pachctl start-commit test -p XXX
 		Short: "Return info about a commit.",
 		Long:  "Return info about a commit.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+			commit, err := cmdutil.ParseCommit(args[0])
+			if err != nil {
+				return err
+			}
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer client.Close()
-			commitInfo, err := client.InspectCommit(args[0], args[1])
+
+			commitInfo, err := client.InspectCommit(commit.Repo.Name, commit.ID)
 			if err != nil {
 				return err
 			}
 			if commitInfo == nil {
-				return fmt.Errorf("commit %s not found", args[1])
+				return fmt.Errorf("commit %s not found", commit.ID)
 			}
 			if raw {
 				return marshaller.Marshal(os.Stdout, commitInfo)
@@ -456,9 +465,9 @@ $ pachctl flush-commit foo@XXX -r bar -r baz
 	rawFlag(flushCommit)
 	fullTimestampsFlag(flushCommit)
 
-	var new bool
+	var newCommits bool
 	subscribeCommit := &cobra.Command{
-		Use:   "subscribe-commit <repo>@<branch-or-commit>",
+		Use:   "subscribe-commit <repo>@<branch>",
 		Short: "Print commits as they are created (finished).",
 		Long: `Print commits as they are created in the specified repo and
 branch.  By default, all existing commits on the specified branch are
@@ -478,22 +487,25 @@ $ pachctl subscribe-commit test@master --from XXX
 $ pachctl subscribe-commit test@master --new
 ` + codeend,
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
-			repo, branch := args[0], args[1]
+			branch, err := cmdutil.ParseBranch(args[0])
+			if err != nil {
+				return err
+			}
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer c.Close()
 
-			if new && from != "" {
+			if newCommits && from != "" {
 				return fmt.Errorf("--new and --from cannot both be provided")
 			}
 
-			if new {
-				from = branch
+			if newCommits {
+				from = branch.Name
 			}
 
-			commitIter, err := c.SubscribeCommit(repo, branch, from, pfsclient.CommitState_STARTED)
+			commitIter, err := c.SubscribeCommit(branch.Repo.Name, branch.Name, from, pfsclient.CommitState_STARTED)
 			if err != nil {
 				return err
 			}
@@ -502,7 +514,7 @@ $ pachctl subscribe-commit test@master --new
 		}),
 	}
 	subscribeCommit.Flags().StringVar(&from, "from", "", "subscribe to all commits since this commit")
-	subscribeCommit.Flags().BoolVar(&new, "new", false, "subscribe to only new commits created from now on")
+	subscribeCommit.Flags().BoolVar(&newCommits, "new", false, "subscribe to only new commits created from now on")
 	rawFlag(subscribeCommit)
 	fullTimestampsFlag(subscribeCommit)
 
@@ -511,12 +523,16 @@ $ pachctl subscribe-commit test@master --new
 		Short: "Delete an input commit.",
 		Long:  "Delete an input commit. An input is a commit which is not the output of a pipeline.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+			commit, err := cmdutil.ParseCommit(args[0])
+			if err != nil {
+				return err
+			}
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer client.Close()
-			return client.DeleteCommit(args[0], args[1])
+			return client.DeleteCommit(commit.Repo.Name, commit.ID)
 		}),
 	}
 
@@ -527,16 +543,20 @@ $ pachctl subscribe-commit test@master --new
 		Short: "Create a new branch, or update an existing branch, on a repo.",
 		Long:  "Create a new branch, or update an existing branch, on a repo, starting a commit on the branch will also create it, so there's often no need to call this.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+			branch, err := cmdutil.ParseBranch(args[0])
+			if err != nil {
+				return err
+			}
+			provenance, err := cmdutil.ParseBranches(branchProvenance)
+			if err != nil {
+				return err
+			}
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer client.Close()
-			provenance, err := cmdutil.ParseBranches(branchProvenance)
-			if err != nil {
-				return err
-			}
-			return client.CreateBranch(args[0], args[1], head, provenance)
+			return client.CreateBranch(branch.Repo.Name, branch.Name, head, provenance)
 		}),
 	}
 	createBranch.Flags().VarP(&branchProvenance, "provenance", "p", "The provenance for the branch.")
@@ -589,12 +609,16 @@ $ pachctl set-branch foo@XXX master
 $ pachctl set-branch foo@test master` + codeend,
 		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
 			fmt.Fprintf(os.Stderr, "set-branch is DEPRECATED, use create-branch instead.\n")
+			commit, err := cmdutil.ParseCommit(args[0])
+			if err != nil {
+				return err
+			}
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer client.Close()
-			return client.SetBranch(args[0], args[1], args[2])
+			return client.SetBranch(commit.Repo.Name, commit.ID, args[1])
 		}),
 	}
 
@@ -603,12 +627,16 @@ $ pachctl set-branch foo@test master` + codeend,
 		Short: "Delete a branch",
 		Long:  "Delete a branch, while leaving the commits intact",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+			branch, err := cmdutil.ParseBranch(args[0])
+			if err != nil {
+				return err
+			}
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer client.Close()
-			return client.DeleteBranch(args[0], args[1], force)
+			return client.DeleteBranch(branch.Repo.Name, branch.Name, force)
 		}),
 	}
 	deleteBranch.Flags().BoolVarP(&force, "force", "f", false, "remove the branch regardless of errors; use with care")
@@ -676,7 +704,11 @@ $ pachctl put-file repo branch -i file
 # files into your Pachyderm cluster.
 $ pachctl put-file repo branch -i http://host/path
 ` + codeend,
-		Run: cmdutil.RunBoundedArgs(1, func(args []string) (retErr error) {
+		Run: cmdutil.RunFixedArgs(1, func(args []string) (retErr error) {
+			file, err := cmdutil.ParseFile(args[0])
+			if err != nil {
+				return err
+			}
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user", client.WithMaxConcurrentStreams(parallelism))
 			if err != nil {
 				return err
@@ -691,15 +723,6 @@ $ pachctl put-file repo branch -i http://host/path
 					retErr = err
 				}
 			}()
-			repoName := args[0]
-			branch := args[1]
-			var path string
-			if len(args) == 3 {
-				path = args[2]
-				if url, err := url.Parse(path); err == nil && url.Scheme != "" {
-					fmt.Fprintf(os.Stderr, "warning: PFS destination \"%s\" looks like a URL; did you mean -f %s?\n", path, path)
-				}
-			}
 			if putFileCommit {
 				fmt.Fprintf(os.Stderr, "flag --commit / -c is deprecated; as of 1.7.2, you will get the same behavior without it\n")
 			}
@@ -757,19 +780,19 @@ $ pachctl put-file repo branch -i http://host/path
 						return fmt.Errorf("must specify filename when reading data from stdin")
 					}
 					eg.Go(func() error {
-						return putFileHelper(c, pfc, repoName, branch, joinPaths("", source), source, recursive, overwrite, limiter, split, targetFileDatums, targetFileBytes, headerRecords, filesPut)
+						return putFileHelper(c, pfc, file.Commit.Repo.Name, file.Commit.ID, joinPaths("", source), source, recursive, overwrite, limiter, split, targetFileDatums, targetFileBytes, headerRecords, filesPut)
 					})
 				} else if len(sources) == 1 && len(args) == 3 {
 					// We have a single source and the user has specified a path,
 					// we use the path and ignore source (in terms of naming the file).
 					eg.Go(func() error {
-						return putFileHelper(c, pfc, repoName, branch, path, source, recursive, overwrite, limiter, split, targetFileDatums, targetFileBytes, headerRecords, filesPut)
+						return putFileHelper(c, pfc, file.Commit.Repo.Name, file.Commit.ID, file.Path, source, recursive, overwrite, limiter, split, targetFileDatums, targetFileBytes, headerRecords, filesPut)
 					})
 				} else if len(sources) > 1 && len(args) == 3 {
 					// We have multiple sources and the user has specified a path,
 					// we use that path as a prefix for the filepaths.
 					eg.Go(func() error {
-						return putFileHelper(c, pfc, repoName, branch, joinPaths(path, source), source, recursive, overwrite, limiter, split, targetFileDatums, targetFileBytes, headerRecords, filesPut)
+						return putFileHelper(c, pfc, file.Commit.Repo.Name, file.Commit.ID, joinPaths(file.Path, source), source, recursive, overwrite, limiter, split, targetFileDatums, targetFileBytes, headerRecords, filesPut)
 					})
 				}
 			}
@@ -792,12 +815,24 @@ $ pachctl put-file repo branch -i http://host/path
 		Short: "Copy files between pfs paths.",
 		Long:  "Copy files between pfs paths.",
 		Run: cmdutil.RunFixedArgs(2, func(args []string) (retErr error) {
+			srcFile, err := cmdutil.ParseFile(args[0])
+			if err != nil {
+				return err
+			}
+			destFile, err := cmdutil.ParseFile(args[1])
+			if err != nil {
+				return err
+			}
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user", client.WithMaxConcurrentStreams(parallelism))
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			return c.CopyFile(args[0], args[1], args[2], args[3], args[4], args[5], overwrite)
+			return c.CopyFile(
+				srcFile.Commit.Repo.Name, srcFile.Commit.ID, srcFile.Path,
+				destFile.Commit.Repo.Name, destFile.Commit.ID, destFile.Path,
+				overwrite,
+			)
 		}),
 	}
 	copyFile.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "Overwrite the existing content of the file, either from previous commits or previous calls to put-file within this commit.")
@@ -819,6 +854,10 @@ $ pachctl get-file foo@master^:XXX
 $ pachctl get-file foo@master^2:XXX
 ` + codeend,
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+			file, err := cmdutil.ParseFile(args[0])
+			if err != nil {
+				return err
+			}
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -829,7 +868,7 @@ $ pachctl get-file foo@master^2:XXX
 					return fmt.Errorf("an output path needs to be specified when using the --recursive flag")
 				}
 				puller := sync.NewPuller()
-				return puller.Pull(client, outputPath, args[0], args[1], args[2], false, false, parallelism, nil, "")
+				return puller.Pull(client, outputPath, file.Commit.Repo.Name, file.Commit.ID, file.Path, false, false, parallelism, nil, "")
 			}
 			var w io.Writer
 			// If an output path is given, print the output to stdout
@@ -843,7 +882,7 @@ $ pachctl get-file foo@master^2:XXX
 				defer f.Close()
 				w = f
 			}
-			return client.GetFile(args[0], args[1], args[2], 0, 0, w)
+			return client.GetFile(file.Commit.Repo.Name, file.Commit.ID, file.Path, 0, 0, w)
 		}),
 	}
 	getFile.Flags().BoolVarP(&recursive, "recursive", "r", false, "Recursively download a directory.")
@@ -855,17 +894,21 @@ $ pachctl get-file foo@master^2:XXX
 		Short: "Return info about a file.",
 		Long:  "Return info about a file.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+			file, err := cmdutil.ParseFile(args[0])
+			if err != nil {
+				return err
+			}
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer client.Close()
-			fileInfo, err := client.InspectFile(args[0], args[1], args[2])
+			fileInfo, err := client.InspectFile(file.Commit.Repo.Name, file.Commit.ID, file.Path)
 			if err != nil {
 				return err
 			}
 			if fileInfo == nil {
-				return fmt.Errorf("file %s not found", args[2])
+				return fmt.Errorf("file %s not found", file.Path)
 			}
 			if raw {
 				return marshaller.Marshal(os.Stdout, fileInfo)
@@ -877,7 +920,7 @@ $ pachctl get-file foo@master^2:XXX
 
 	var history int64
 	listFile := &cobra.Command{
-		Use:   "list-file <repo>@<branch-or-commit>:<path/in/pfs>",
+		Use:   "list-file <repo>@<branch-or-commit>[:<path/in/pfs>]",
 		Short: "Return the files in a directory.",
 		Long: `Return the files in a directory.
 
@@ -904,22 +947,22 @@ $ pachctl list-file foo@master --history n
 $ pachctl list-file foo@master --history -1
 ` + codeend,
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+			file, err := cmdutil.ParseFile(args[0])
+			if err != nil {
+				return err
+			}
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer client.Close()
-			var path string
-			if len(args) == 3 {
-				path = args[2]
-			}
 			if raw {
-				return client.ListFileF(args[0], args[1], path, history, func(fi *pfsclient.FileInfo) error {
+				return client.ListFileF(file.Commit.Repo.Name, file.Commit.ID, file.Path, history, func(fi *pfsclient.FileInfo) error {
 					return marshaller.Marshal(os.Stdout, fi)
 				})
 			}
 			writer := tabwriter.NewWriter(os.Stdout, pretty.FileHeader)
-			if err := client.ListFileF(args[0], args[1], path, history, func(fi *pfsclient.FileInfo) error {
+			if err := client.ListFileF(file.Commit.Repo.Name, file.Commit.ID, file.Path, history, func(fi *pfsclient.FileInfo) error {
 				pretty.PrintFileInfo(writer, fi, fullTimestamps)
 				return nil
 			}); err != nil {
@@ -950,12 +993,16 @@ $ pachctl glob-file "foo@master:A*"
 $ pachctl glob-file "foo@master:data/*"
 ` + codeend,
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+			file, err := cmdutil.ParseFile(args[0])
+			if err != nil {
+				return err
+			}
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer client.Close()
-			fileInfos, err := client.GlobFile(args[0], args[1], args[2])
+			fileInfos, err := client.GlobFile(file.Commit.Repo.Name, file.Commit.ID, file.Path)
 			if err != nil {
 				return err
 			}
@@ -994,24 +1041,33 @@ $ pachctl diff-file foo@master:path
 $ pachctl diff-file foo@master:path1 bar@master:path2
 ` + codeend,
 		Run: cmdutil.RunBoundedArgs(1, 2, func(args []string) error {
+			newFile, err := cmdutil.ParseFile(args[0])
+			if err != nil {
+				return err
+			}
+			oldFile := client.NewFile("", "", "")
+			if len(args) == 2 {
+				oldFile, err = cmdutil.ParseFile(args[1])
+				if err != nil {
+					return err
+				}
+			}
+
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer client.Close()
-			var newFiles []*pfsclient.FileInfo
-			var oldFiles []*pfsclient.FileInfo
-			switch {
-			case len(args) == 3:
-				newFiles, oldFiles, err = client.DiffFile(args[0], args[1], args[2], "", "", "", shallow)
-			case len(args) == 6:
-				newFiles, oldFiles, err = client.DiffFile(args[0], args[1], args[2], args[3], args[4], args[5], shallow)
-			default:
-				return fmt.Errorf("diff-file expects either 3 or 6 args, got %d", len(args))
-			}
+
+			newFiles, oldFiles, err := client.DiffFile(
+				newFile.Commit.Repo.Name, newFile.Commit.ID, newFile.Path,
+				oldFile.Commit.Repo.Name, oldFile.Commit.ID, oldFile.Path,
+				shallow,
+			)
 			if err != nil {
 				return err
 			}
+
 			if len(newFiles) > 0 {
 				fmt.Println("New Files:")
 				writer := tabwriter.NewWriter(os.Stdout, pretty.FileHeader)
@@ -1043,12 +1099,16 @@ $ pachctl diff-file foo@master:path1 bar@master:path2
 		Short: "Delete a file.",
 		Long:  "Delete a file.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+			file, err := cmdutil.ParseFile(args[0])
+			if err != nil {
+				return err
+			}
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
 			defer client.Close()
-			return client.DeleteFile(args[0], args[1], args[2])
+			return client.DeleteFile(file.Commit.Repo.Name, file.Commit.ID, file.Path)
 		}),
 	}
 

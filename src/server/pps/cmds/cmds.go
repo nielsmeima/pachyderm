@@ -125,12 +125,6 @@ $ pachctl list-job -i foo@XXX -i bar@YYY
 $ pachctl list-job -p foo -i bar@YYY
 ` + codeend,
 		Run: cmdutil.RunFixedArgs(0, func(args []string) error {
-			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
-			if err != nil {
-				return err
-			}
-			defer client.Close()
-
 			commits, err := cmdutil.ParseCommits(inputCommitStrs)
 			if err != nil {
 				return err
@@ -138,14 +132,17 @@ $ pachctl list-job -p foo -i bar@YYY
 
 			var outputCommit *pfs.Commit
 			if outputCommitStr != "" {
-				outputCommits, err := cmdutil.ParseCommits([]string{outputCommitStr})
+				outputCommit, err = cmdutil.ParseCommit(outputCommitStr)
 				if err != nil {
 					return err
 				}
-				if len(outputCommits) == 1 {
-					outputCommit = outputCommits[0]
-				}
 			}
+
+			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
+			if err != nil {
+				return err
+			}
+			defer client.Close()
 
 			if raw {
 				return client.ListJobF(pipelineName, commits, outputCommit, func(ji *ppsclient.JobInfo) error {
