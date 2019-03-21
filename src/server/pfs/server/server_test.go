@@ -354,7 +354,6 @@ func TestRegressionPutFileIntoOpenCommit(t *testing.T) {
 	require.NoError(t, err)
 }
 
-
 func TestCreateInvalidBranchName(t *testing.T) {
 
 	client := GetPachClient(t)
@@ -4630,7 +4629,7 @@ func TestPutFilesURL(t *testing.T) {
 }
 
 func writeObj(t *testing.T, c obj.Client, path, content string) {
-	w, err := c.Writer(path)
+	w, err := c.Writer(context.Background(), path)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, w.Close())
@@ -4651,7 +4650,7 @@ func TestPutFilesObjURL(t *testing.T) {
 	defer func() {
 		for _, path := range paths {
 			// ignored error, this is just cleanup, not actually part of the test
-			objC.Delete(path)
+			objC.Delete(context.Background(), path)
 		}
 	}()
 
@@ -4692,7 +4691,7 @@ func TestFileHistory(t *testing.T) {
 
 	repo := "test"
 	require.NoError(t, client.CreateRepo(repo))
-	numCommits := 5
+	numCommits := 10
 	for i := 0; i < numCommits; i++ {
 		_, err = client.PutFile(repo, "master", "file", strings.NewReader("foo\n"))
 		require.NoError(t, err)
@@ -4724,4 +4723,3 @@ func TestFileHistory(t *testing.T) {
 		require.Equal(t, i, len(fileInfos))
 	}
 }
-

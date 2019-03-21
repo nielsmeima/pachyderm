@@ -32,6 +32,7 @@ import (
 	"github.com/pachyderm/pachyderm/src/client/pfs"
 	"github.com/pachyderm/pachyderm/src/client/pkg/config"
 	"github.com/pachyderm/pachyderm/src/client/pkg/grpcutil"
+	"github.com/pachyderm/pachyderm/src/client/pkg/tracing"
 	"github.com/pachyderm/pachyderm/src/client/pps"
 	"github.com/pachyderm/pachyderm/src/client/version/versionpb"
 	"github.com/pachyderm/pachyderm/src/server/pkg/cmdutil"
@@ -275,6 +276,9 @@ func getCertOptionsFromEnv() ([]Option, error) {
 func getUserMachineAddrAndOpts(cfg *config.Config) (string, []Option, error) {
 	// 1) PACHD_ADDRESS environment variable (shell-local) overrides global config
 	if envAddr, ok := os.LookupEnv("PACHD_ADDRESS"); ok {
+		if !strings.Contains(envAddr, ":") {
+			envAddr = fmt.Sprintf("%s:%s", envAddr, DefaultPachdNodePort)
+		}
 		options, err := getCertOptionsFromEnv()
 		if err != nil {
 			return "", nil, err
@@ -285,6 +289,9 @@ func getUserMachineAddrAndOpts(cfg *config.Config) (string, []Option, error) {
 	// TODO(ys): remove this eventually
 	if envAddr, ok := os.LookupEnv("ADDRESS"); ok {
 		log.Warnf("the `ADDRESS` environment variable is deprecated; please use `PACHD_ADDRESS`")
+		if !strings.Contains(envAddr, ":") {
+			envAddr = fmt.Sprintf("%s:%s", envAddr, DefaultPachdNodePort)
+		}
 		options, err := getCertOptionsFromEnv()
 		if err != nil {
 			return "", nil, err
@@ -325,7 +332,7 @@ func NewOnUserMachine(reportMetrics bool, prefix string, options ...Option) (*AP
 	cfg, err := config.Read()
 	if err != nil {
 		// metrics errors are non fatal
-		log.Warningf("error loading user config from ~/.pachderm/config: %v", err)
+		log.Warningf("error loading user config from ~/.pachyderm/config: %v", err)
 	}
 
 	// create new pachctl client
@@ -404,10 +411,7 @@ func NewInCluster(options ...Option) (*APIClient, error) {
 
 // Close the connection to gRPC
 func (c *APIClient) Close() error {
-	if err := c.clientConn.Close(); err != nil {
-		return err
-	}
-	return nil
+	return c.clientConn.Close()
 }
 
 // DeleteAll deletes everything in the cluster.
@@ -472,8 +476,16 @@ func (c *APIClient) connect(timeout time.Duration) error {
 		tlsCreds := credentials.NewClientTLSFromCert(c.caCerts, "")
 		dialOptions = append(dialOptions, grpc.WithTransportCredentials(tlsCreds))
 	}
-	dialOptions = append(dialOptions, grpc.WithTimeout(timeout))
-	// TODO(msteffen) switch to grpc.DialContext instead
+	dialOptions = append(dialOptions,
+		// TODO(msteffen) switch to grpc.DialContext instead
+		grpc.WithTimeout(timeout),
+	)
+	if tracing.IsActive() {
+		dialOptions = append(dialOptions,
+			grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor()),
+			grpc.WithStreamInterceptor(tracing.StreamClientInterceptor()),
+		)
+	}
 	clientConn, err := grpc.Dial(c.addr, dialOptions...)
 	if err != nil {
 		return err

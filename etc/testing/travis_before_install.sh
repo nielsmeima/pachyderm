@@ -4,8 +4,9 @@ set -ex
 
 echo 'DOCKER_OPTS="-H unix:///var/run/docker.sock -s devicemapper"' | tee /etc/default/docker > /dev/null
 
-# Install jq
-sudo apt-get install jq
+# Install jq and ag
+sudo apt-get update -y
+sudo apt-get install jq silversearcher-ag
 
 # Install fuse
 apt-get install -qq pkg-config fuse
@@ -43,9 +44,9 @@ fi
 
 # Install etcdctl
 # To get the latest etcd version:
-# curl -s https://api.github.com/repos/coreos/etcd/releases | jq -r .[].tag_name | sort | tail -n1
+# curl -Ls https://api.github.com/repos/etcd-io/etcd/releases | jq -r .[].tag_name
 if [ ! -f ~/cached-deps/etcdctl ] ; then
-    ETCD_VERSION=v3.3.6
+    ETCD_VERSION=v3.3.12
     curl -L https://storage.googleapis.com/etcd/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-amd64.tar.gz | \
         tar xzf - --strip-components=1 && \
         mv ./etcdctl ~/cached-deps/etcdctl

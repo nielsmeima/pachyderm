@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	golog "log"
 	"os"
 	"os/signal"
 	"strings"
@@ -28,13 +27,14 @@ import (
 	pfscmds "github.com/pachyderm/pachyderm/src/server/pfs/cmds"
 	"github.com/pachyderm/pachyderm/src/server/pkg/cmdutil"
 	deploycmds "github.com/pachyderm/pachyderm/src/server/pkg/deploy/cmds"
+	logutil "github.com/pachyderm/pachyderm/src/server/pkg/log"
 	"github.com/pachyderm/pachyderm/src/server/pkg/metrics"
 	ppscmds "github.com/pachyderm/pachyderm/src/server/pps/cmds"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 )
@@ -133,16 +133,6 @@ __custom_func() {
 }`
 )
 
-type logWriter golog.Logger
-
-func (l *logWriter) Write(p []byte) (int, error) {
-	err := (*golog.Logger)(l).Output(2, string(p))
-	if err != nil {
-		return 0, err
-	}
-	return len(p), nil
-}
-
 // PachctlCmd creates a cobra.Command which can deploy pachyderm clusters and
 // interact with them (it implements the pachctl binary).
 func PachctlCmd() (*cobra.Command, error) {
@@ -160,23 +150,32 @@ func PachctlCmd() (*cobra.Command, error) {
 
 Environment variables:
   PACHD_ADDRESS=<host>:<port>, the pachd server to connect to (e.g. 127.0.0.1:30650).
+  PACH_CONFIG=<path>, the path where pachctl will attempt to load your pach config.
+  JAEGER_ENDPOINT=<host>:<port>, the Jaeger server to connect to, if PACH_ENABLE_TRACING is set
+  PACH_ENABLE_TRACING={true,false}, If true, and JAEGER_ENDPOINT is set, attach a
+    Jaeger trace to all outgoing RPCs
 `,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			log.SetFormatter(new(prefixed.TextFormatter))
+
 			if !verbose {
+				log.SetLevel(log.ErrorLevel)
 				// Silence grpc logs
-				l := log.New()
-				l.Level = log.FatalLevel
 				grpclog.SetLoggerV2(grpclog.NewLoggerV2(ioutil.Discard, ioutil.Discard, ioutil.Discard))
 			} else {
+				log.SetLevel(log.DebugLevel)
 				// etcd overrides grpc's logs--there's no way to enable one without
-				// enabling both
+				// enabling both.
+				// Error and warning logs are discarded because they will be
+				// redundantly sent to the info logger. See:
+				// https://godoc.org/google.golang.org/grpc/grpclog#NewLoggerV2
+				logger := log.StandardLogger()
 				etcd.SetLogger(grpclog.NewLoggerV2(
-					(*logWriter)(golog.New(os.Stderr, "[etcd/grpc] INFO  ", golog.LstdFlags|golog.Lshortfile)),
-					(*logWriter)(golog.New(os.Stderr, "[etcd/grpc] WARN  ", golog.LstdFlags|golog.Lshortfile)),
-					(*logWriter)(golog.New(os.Stderr, "[etcd/grpc] ERROR ", golog.LstdFlags|golog.Lshortfile)),
+					logutil.NewGRPCLogWriter(logger, "etcd/grpc"),
+					ioutil.Discard,
+					ioutil.Discard,
 				))
 			}
-
 		},
 		BashCompletionFunction: bashCompletionFunc,
 	}
@@ -336,13 +335,14 @@ This resets the cluster to its initial state.`,
 			for _, pi := range pipelineInfos {
 				pipelines = append(pipelines, red(pi.Pipeline.Name))
 			}
-			fmt.Printf("Are you sure you want to delete all ACLs, repos, commits, files, pipelines and jobs?\nyN\n")
+			fmt.Println("All ACLs, repos, commits, files, pipelines and jobs will be deleted.")
 			if len(repos) > 0 {
 				fmt.Printf("Repos to delete: %s\n", strings.Join(repos, ", "))
 			}
 			if len(pipelines) > 0 {
 				fmt.Printf("Pipelines to delete: %s\n", strings.Join(pipelines, ", "))
 			}
+			fmt.Println("Are you sure you want to do this? (y/n):")
 			r := bufio.NewReader(os.Stdin)
 			bytes, err := r.ReadBytes('\n')
 			if err != nil {
@@ -354,81 +354,6 @@ This resets the cluster to its initial state.`,
 			return nil
 		}),
 	}
-	var port uint16
-	var remotePort uint16
-	var samlPort uint16
-	var uiPort uint16
-	var uiWebsocketPort uint16
-	var pfsPort uint16
-	var namespace string
-
-	portForward := &cobra.Command{
-		Use:   "port-forward",
-		Short: "Forward a port on the local machine to pachd. This command blocks.",
-		Long:  "Forward a port on the local machine to pachd. This command blocks.",
-		Run: cmdutil.RunFixedArgs(0, func(args []string) error {
-			config, err := cmdutil.KubeConfig()
-			if err != nil {
-				return err
-			}
-			fw, err := client.NewPortForwarder(config, namespace, ioutil.Discard, os.Stderr)
-			if err != nil {
-				return err
-			}
-
-			if err = fw.Lock(); err != nil {
-				return err
-			}
-
-			var eg errgroup.Group
-
-			eg.Go(func() error {
-				fmt.Println("Forwarding the pachd (Pachyderm daemon) port...")
-				return fw.RunForDaemon(port, remotePort)
-			})
-
-			eg.Go(func() error {
-				fmt.Println("Forwarding the SAML ACS port...")
-				return fw.RunForSAMLACS(samlPort)
-			})
-
-			eg.Go(func() error {
-				fmt.Printf("Forwarding the dash (Pachyderm dashboard) UI port to http://localhost:%v ...\n", uiPort)
-				return fw.RunForDashUI(uiPort)
-			})
-
-			eg.Go(func() error {
-				fmt.Println("Forwarding the dash (Pachyderm dashboard) websocket port...")
-				return fw.RunForDashWebSocket(uiWebsocketPort)
-			})
-
-			eg.Go(func() error {
-				fmt.Println("Forwarding the PFS port...")
-				return fw.RunForPFS(pfsPort)
-			})
-
-			defer fw.Close()
-
-			if err = eg.Wait(); err != nil {
-				return err
-			}
-
-			fmt.Println("CTRL-C to exit")
-			fmt.Println("NOTE: kubernetes port-forward often outputs benign error messages, these should be ignored unless they seem to be impacting your ability to connect over the forwarded port.")
-
-			ch := make(chan os.Signal, 1)
-			signal.Notify(ch, os.Interrupt)
-			<-ch
-			return nil
-		}),
-	}
-	portForward.Flags().Uint16VarP(&port, "port", "p", 30650, "The local port to bind pachd to.")
-	portForward.Flags().Uint16Var(&remotePort, "remote-port", 650, "The remote port that pachd is bound to in the cluster.")
-	portForward.Flags().Uint16Var(&samlPort, "saml-port", 30654, "The local port to bind pachd's SAML ACS to.")
-	portForward.Flags().Uint16VarP(&uiPort, "ui-port", "u", 30080, "The local port to bind Pachyderm's dash service to.")
-	portForward.Flags().Uint16VarP(&uiWebsocketPort, "proxy-port", "x", 30081, "The local port to bind Pachyderm's dash proxy service to.")
-	portForward.Flags().Uint16VarP(&pfsPort, "pfs-port", "f", 30652, "The local port to bind PFS over HTTP to.")
-	portForward.Flags().StringVar(&namespace, "namespace", "default", "Kubernetes namespace Pachyderm is deployed in.")
 
 	var install bool
 	var path string
@@ -470,7 +395,6 @@ This resets the cluster to its initial state.`,
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(deleteAll)
-	rootCmd.AddCommand(portForward)
 	rootCmd.AddCommand(completion)
 	return rootCmd, nil
 }

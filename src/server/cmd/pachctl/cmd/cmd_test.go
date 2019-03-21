@@ -29,7 +29,7 @@ func TestNoPortError(t *testing.T) {
 	c.Stderr = &errMsg
 	err := c.Run()
 	require.YesError(t, err) // 1ns should prevent even local connections
-	require.Matches(t, "does not seem to be host:port", errMsg.String())
+	require.Matches(t, "30650", errMsg.String())
 }
 
 func TestWeirdPortError(t *testing.T) {
