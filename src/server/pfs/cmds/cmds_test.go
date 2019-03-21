@@ -16,7 +16,7 @@ func TestCommit(t *testing.T) {
 
 		# Create a commit and put some data in it
 		commit1=$(pachctl start-commit {{.repo}}@master --no-port-forwarding)
-		echo "file contents" | pachctl put-file {{.repo}} ${commit1} /file -f --no-port-forwarding -
+		echo "file contents" | pachctl put-file {{.repo}}@${commit1}:file -f --no-port-forwarding -
 		pachctl finish-commit {{.repo}}@${commit1} --no-port-forwarding
 
 		# Check that the commit above now appears in the output
@@ -25,7 +25,7 @@ func TestCommit(t *testing.T) {
 
 		# Create a second commit and put some data in it
 		commit2=$(pachctl start-commit {{.repo}}@master --no-port-forwarding)
-		echo "file contents" | pachctl put-file {{.repo}}@${commit2}:/file -f --no-port-forwarding -
+		echo "file contents" | pachctl put-file {{.repo}}@${commit2}:file -f --no-port-forwarding -
 		pachctl finish-commit {{.repo}}@${commit2} --no-port-forwarding
 
 		# Check that the commit above now appears in the output
