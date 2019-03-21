@@ -774,7 +774,7 @@ $ pachctl put-file repo branch -i http://host/path
 			filesPut := &gosync.Map{}
 			for _, source := range sources {
 				source := source
-				if len(args) == 2 {
+				if file.Path == "" {
 					// The user has not specified a path so we use source as path.
 					if source == "-" {
 						return fmt.Errorf("must specify filename when reading data from stdin")
@@ -782,13 +782,13 @@ $ pachctl put-file repo branch -i http://host/path
 					eg.Go(func() error {
 						return putFileHelper(c, pfc, file.Commit.Repo.Name, file.Commit.ID, joinPaths("", source), source, recursive, overwrite, limiter, split, targetFileDatums, targetFileBytes, headerRecords, filesPut)
 					})
-				} else if len(sources) == 1 && len(args) == 3 {
+				} else if len(sources) == 1 {
 					// We have a single source and the user has specified a path,
 					// we use the path and ignore source (in terms of naming the file).
 					eg.Go(func() error {
 						return putFileHelper(c, pfc, file.Commit.Repo.Name, file.Commit.ID, file.Path, source, recursive, overwrite, limiter, split, targetFileDatums, targetFileBytes, headerRecords, filesPut)
 					})
-				} else if len(sources) > 1 && len(args) == 3 {
+				} else {
 					// We have multiple sources and the user has specified a path,
 					// we use that path as a prefix for the filepaths.
 					eg.Go(func() error {
