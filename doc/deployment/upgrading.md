@@ -66,7 +66,6 @@ deployment "dash" created
 secret "pachyderm-storage-secret" created
 
 Pachyderm is launching. Check its status with "kubectl get all"
-Once launched, access the dashboard by running "pachctl port-forward"
 ```
 
 After a few minutes, you should then see a healthy Pachyderm cluster running in Kubernetes:
@@ -110,8 +109,4 @@ This might happen when re-deploying the enterprise dashboard, for example. These
 
 ### Reconnecting `pachctl`
 
-When you upgrade Pachyderm versions, you may lose your local `port-forward` to connect `pachctl` to your cluster. Alternatively, if you are setting the `PACHD_ADDRESS` environmental variable manually to connect `pachctl` to your cluster, the IP address for Pachyderm may have changed. To fix this, you can either:
-
-- Re-run `pachctl port-forward &`, or
-- Set the `PACHD_ADDRESS` environmental variable to the update value, e.g., `export PACHD_ADDRESS=<k8s master IP>:30650`.
-
+When you upgrade Pachyderm versions, you may need to reset the `PACHD_ADDRESS` environment variable to match the new cluster IP.

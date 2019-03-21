@@ -38,5 +38,3 @@ minikube:echo hi
 		echo -en "\e[G\e[K$${WHEEL:0:1} waiting for pachyderm to start..."; \
 		sleep 1; \
 	done
-	pachctl port-forward &
-	

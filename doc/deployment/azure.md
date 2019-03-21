@@ -121,13 +121,6 @@ pachd-1971105989-mjn61    1/1       Running   0          54m
 
 **Note**: If you see a few restarts on the pachd nodes, that's totally ok. That simply means that Kubernetes tried to bring up those containers before etcd was ready so it restarted them.
 
-Finally, assuming you want to connect to the cluster from your local machine (i.e., your laptop), we need to set up forward a port so that `pachctl` can talk to the cluster:
-
-```sh
-# Forward the ports. We background this process because it blocks.
-$ pachctl port-forward &
-```
-
 And you're done! You can test to make sure the cluster is working by trying `pachctl version` or even by creating a new repo.
 
 ```sh

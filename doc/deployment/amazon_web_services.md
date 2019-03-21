@@ -172,13 +172,6 @@ pachd-65fd68d6d4-8vjq7   1/1       Running   0          4m
 
 **Note**: If you see a few restarts on the pachd nodes, that's totally ok. That simply means that Kubernetes tried to bring up those containers before etcd was ready so it restarted them.
 
-If you see the above pods running, the last thing you need to do is forward a couple ports so that `pachctl` can talk to the cluster:
-
-```sh
-# Forward the ports. We background this process because it blocks.
-$ pachctl port-forward &
-```
-
 And you're done! You can verify that the cluster is working by executing `pachctl version`, which should return a version for both `pachctl` and `pachd`:
 
 ```sh
@@ -214,13 +207,6 @@ NAME                     READY     STATUS    RESTARTS   AGE
 dash-6c9dc97d9c-89dv9    2/2       Running   0          1m
 etcd-0                   1/1       Running   0          4m
 pachd-65fd68d6d4-8vjq7   1/1       Running   0          4m
-```
-
-If you see an output similar to the above, the last thing you need to do is forward a couple ports so that `pachctl` can talk to the cluster.
-
-```sh
-# Forward the ports. We background this process because it blocks.
-$ pachctl port-forward &
 ```
 
 And you're done! You can verify that the cluster is working by running `pachctl version`, which should return a version for both `pachctl` and `pachd`:
@@ -262,15 +248,6 @@ NAME                     READY     STATUS    RESTARTS   AGE
 dash-6c9dc97d9c-89dv9    2/2       Running   0          1m
 etcd-0                   1/1       Running   0          4m
 pachd-65fd68d6d4-8vjq7   1/1       Running   0          4m
-```
-
-### Connect `pachctl`
-
-You will then need to forward a couple ports so that `pachctl` can talk to the cluster:
-
-```sh
-# Forward the ports. We background this process because it blocks.
-$ pachctl port-forward &
 ```
 
 And you're done! You can verify that the cluster is working by executing `pachctl version`, which should return a version for both `pachctl` and `pachd`:

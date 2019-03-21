@@ -51,9 +51,7 @@ do
   sleep 1
 done
 
-# port-forward to vault and connect vault client
-kubectl port-forward vault 8200 &
-sleep 3
+# connect vault client
 export VAULT_ADDR='http://127.0.0.1:8200'
 echo root | vault login -
 

@@ -5,7 +5,6 @@ kubectl get all
 which pachctl
 pachctl deploy
 until timeout 1s ../../../etc/kube/check_pachd_ready.sh; do sleep 1; done
-pachctl port-forward &
 pachctl version
 # Setup Mount
 umount ~/pfs

@@ -117,7 +117,7 @@ func Cmds(noMetrics *bool) []*cobra.Command {
 	pprof.Flags().DurationVarP(&duration, "duration", "d", time.Minute, "Duration to run a CPU profile for.")
 
 	return []*cobra.Command{
-		debug,
+		debugDump,
 		profile,
 		binary,
 		pprof,

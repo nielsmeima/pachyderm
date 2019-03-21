@@ -90,7 +90,6 @@ pachctl auth set-config <<EOF
   ],
 
   "saml_svc_options": {
-    # These URLs work if using pachctl port-forward
     "acs_url": "http://localhost:30654/saml/acs",
     "metadata_url": "http://localhost:30654/saml/metadata",
     "dash_url": "http://localhost:30080/auth/autologin",

@@ -142,7 +142,6 @@ deployment "dash" created
 secret "pachyderm-storage-secret" created
 
 Pachyderm is launching. Check its status with "kubectl get all"
-Once launched, access the dashboard by running "pachctl port-forward"
 ```
 
 Note, here we are using 1 etcd node to manage Pachyderm metadata. The number of etcd nodes can be adjusted as needed.
@@ -160,13 +159,6 @@ pachd-3677268306-9sqm0   1/1       Running   0          4m
 ```
 
 If you see a few restarts on the `pachd` pod, that's totally ok. That simply means that Kubernetes tried to bring up those containers before other components were ready, so it restarted them.
-
-Finally, assuming your `pachd` is running as shown above, we need to set up forward a port so that `pachctl` can talk to the cluster.
-
-```sh
-# Forward the ports. We background this process because it blocks.
-$ pachctl port-forward &
-```
 
 And you're done! You can test to make sure the cluster is working by trying `pachctl version` or even creating a new repo.
 

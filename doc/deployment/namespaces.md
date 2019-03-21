@@ -19,12 +19,9 @@ etcd-69fcfb5fcf-dgc8j    1/1       Running   0          3m
 pachd-784bdf7cd7-7dzxr   1/1       Running   0          3m
 ```
 
-**Note** - When using a non-default namespace for Pachyderm, you will have to use the `--namespace` flag for various other `pachctl` command for them to work as expected. These include port-forwarding and undeploy:
+**Note** - When using a non-default namespace for Pachyderm, you will have to use the `--namespace` flag for various other `pachctl` command for them to work as expected. This includes undeploy:
 
 ```
-# forward Pachyderm ports when it was deployed to a non-default namespace
-$ pachctl port-forward --namespace pachyderm &
-
 # undeploying Pachyderm when it was deployed to a non-default namespace
 $ pachctl undeploy --namespace pachyderm 
 ```
