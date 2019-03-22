@@ -134,7 +134,7 @@ pushd examples/ml/iris
     pachctl --no-port-forwarding flush-job training@$commit_id
 
     # just make sure we outputted some files
-    inference_file_count=`pachctl --no-port-forwarding list-file@inference:master | wc -l`
+    inference_file_count=`pachctl --no-port-forwarding list-file inference@master | wc -l`
     if [ $inference_file_count -ne 3 ]; then
         echo "Unexpected file count in inference repo"
         exit 1
