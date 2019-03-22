@@ -626,7 +626,7 @@ All jobs created by a pipeline will create commits in the pipeline's repo.
 	var all bool
 	var force bool
 	deletePipeline := &cobra.Command{
-		Use:   "delete-pipeline <pipeline>",
+		Use:   "delete-pipeline (<pipeline>|--all)",
 		Short: "Delete a pipeline.",
 		Long:  "Delete a pipeline.",
 		Run: cmdutil.RunBoundedArgs(0, 1, func(args []string) error {

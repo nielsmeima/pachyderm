@@ -267,8 +267,8 @@ func CheckCmd(noMetrics, noPortForwarding *bool) *cobra.Command {
 			"For example, 'pachctl auth check reader private-data' prints \"true\" " +
 			"if the you have at least \"reader\" access to the repo " +
 			"\"private-data\" (you could be a reader, writer, or owner). Unlike " +
-			"`pachctl get-acl`, you do not need to have access to 'repo' to " +
-			"discover your own acess level.",
+			"`pachctl auth get`, you do not need to have access to 'repo' to " +
+			"discover your own access level.",
 		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
 			scope, err := auth.ParseScope(args[0])
 			if err != nil {
