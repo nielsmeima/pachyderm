@@ -163,8 +163,11 @@ $ pachctl list-job -p foo -i bar@YYY
 		}),
 	}
 	listJob.Flags().StringVarP(&pipelineName, "pipeline", "p", "", "Limit to jobs made by pipeline.")
+	listJob.MarkFlagCustom("pipeline", "__pachctl_get_pipeline")
 	listJob.Flags().StringVarP(&outputCommitStr, "output", "o", "", "List jobs with a specific output commit. format: <repo>@<branch-or-commit>")
+	listJob.MarkFlagCustom("output", "__pachctl_get_repo_commit")
 	listJob.Flags().StringSliceVarP(&inputCommitStrs, "input", "i", []string{}, "List jobs with a specific set of input commits. format: <repo>@<branch-or-commit>")
+	listJob.MarkFlagCustom("input", "__pachctl_get_repo_commit")
 	fullTimestampsFlag(listJob)
 	rawFlag(listJob)
 
@@ -216,6 +219,7 @@ $ pachctl flush-job foo@XXX -p bar -p baz
 		}),
 	}
 	flushJob.Flags().VarP(&pipelines, "pipeline", "p", "Wait only for jobs leading to a specific set of pipelines")
+	flushJob.MarkFlagCustom("pipeline", "__pachctl_get_pipeline")
 	rawFlag(flushJob)
 	fullTimestampsFlag(flushJob)
 
@@ -406,8 +410,10 @@ $ pachctl get-logs --pipeline=filter --inputs=/apple.txt,123aef
 	}
 	getLogs.Flags().StringVarP(&pipelineName, "pipeline", "p", "", "Filter the log "+
 		"for lines from this pipeline (accepts pipeline name)")
+	getLogs.MarkFlagCustom("pipeline", "__pachctl_get_pipeline")
 	getLogs.Flags().StringVar(&jobID, "job", "", "Filter for log lines from "+
 		"this job (accepts job ID)")
+	getLogs.MarkFlagCustom("job", "__pachctl_get_job")
 	getLogs.Flags().StringVar(&datumID, "datum", "", "Filter for log lines for this datum (accepts datum ID)")
 	getLogs.Flags().StringVar(&commaInputs, "inputs", "", "Filter for log lines "+
 		"generated while processing these files (accepts PFS paths or file hashes)")

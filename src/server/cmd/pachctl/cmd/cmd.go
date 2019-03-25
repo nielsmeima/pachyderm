@@ -42,90 +42,209 @@ import (
 const (
 	bashCompletionFunc = `
 __pachctl_get_object() {
-	if [[ ${#nouns[@]} -ne $1 ]]; then
-		return
-	fi
-
-	local pachctl_output out
-	if pachctl_output=$(eval pachctl $2 2>/dev/null); then
-		out=($(echo "${pachctl_output}" | awk -v c=$3 'NR > 1 {print $c}'))
-		COMPREPLY+=($(compgen -W "${out[*]}" -- "$cur"))
+	if pachctl_output=$(eval pachctl $1 2>/dev/null); then
+		local out=($(echo "${pachctl_output}" | awk -v c=$2 'NR > 1 {print $c}'))
+		echo "out: ${out}"
+		COMPREPLY+=($(compgen -P "${__pachctl_prefix}" -S "${__pachctl_suffix}" -W "${out[*]}" "$cur"))
 	fi
 }
 
 __pachctl_get_repo() {
-	__pachctl_get_object $1 "list-repo" 1
+	__pachctl_get_object "list-repo" 1
 }
 
+# $1: repo name
 __pachctl_get_commit() {
-	__pachctl_get_object $1 "list-commit $2" 2
+	if [[ -z $1 ]]; then
+		return
+	fi
+	__pachctl_get_object "list-commit $1" 2
+	__pachctl_get_object "list-branch $1" 1
 }
 
+# Performs completion of the standard format <repo>@<branch-or-commit>
+__pachctl_get_repo_commit() {
+	if [[ ${cur} != *@* ]]; then
+		compopt -o nospace
+		local __pachctl_suffix="@"
+		__pachctl_get_repo
+	else
+		local repo=$(__parse_repo ${cur})
+		local cur=$(__parse_commit ${cur})
+		local __pachctl_prefix="${repo}@"
+		__pachctl_get_commit ${repo}
+	fi
+}
+
+# Performs completion of the standard format <repo>@<branch> (will not match commits)
+__pachctl_get_repo_branch() {
+	if [[ ${cur} != *@* ]]; then
+		compopt -o nospace
+		local __pachctl_suffix="@"
+		__pachctl_get_repo
+	else
+		local repo=$(__parse_repo ${cur})
+		local cur=$(__parse_commit ${cur})
+		local __pachctl_prefix="${repo}@"
+		__pachctl_get_branch ${repo}
+	fi
+}
+
+# Performs completion of the standard format <repo>@<branch-or-commit>:<path>
+__pachctl_get_repo_commit_path() {
+	echo get_repo_commit_path
+	if [[ ${cur} != *@* ]]; then
+		__pachctl_get_repo_commit
+	elif [[ ${cur} != *:* ]]; then
+		compopt -o nospace
+		local __pachctl_suffix=":"
+		__pachctl_get_repo_commit
+	else
+		local repo=$(__parse_repo ${cur})
+		local commit=$(__parse_commit ${cur})
+		local cur=$(__parse_path ${cur})
+		local __pachctl_prefix="${repo}@${commit}:"
+		echo get path
+		__pachctl_get_path ${repo} ${commit}
+	fi
+}
+
+# $1: repo name
+# $2: branch name or commit id
 __pachctl_get_path() {
-	__pachctl_get_object $1 "glob-file $2 $3 \"${words[${#words[@]}-1]}**\"" 1
+	echo "getting path repo: $1, commit: $2, cur: $cur"
+	if [[ -z $1 ]] || [[ -z $2 ]]; then
+		return
+	fi
+
+	__pachctl_get_object "glob-file $1 $2 \"${cur}**\"" 1
 }
 
+# $1: repo name
 __pachctl_get_branch() {
-	__pachctl_get_object $1 "list-branch $2" 1
+	if [[ -z $1 ]]; then
+		return
+	fi
+	__pachctl_get_object "list-branch $1" 1
 }
 
 __pachctl_get_job() {
-	__pachctl_get_object $1 "list-job" 1
+	__pachctl_get_object "list-job" 1
 }
 
 __pachctl_get_pipeline() {
-	__pachctl_get_object $1 "list-pipeline" 1
+	__pachctl_get_object "list-pipeline" 1
 }
 
 __pachctl_get_datum() {
-	__pachctl_get_object $1 "list-datum $2" 1
+	__pachctl_get_object "list-datum $2" 1
 }
 
-__custom_func() {
+# Parses repo from the standard format <repo>@<branch-or-commit>:<path>
+__parse_repo() {
+	echo $1 | cut -f 1 -d "@"
+}
+
+# Parses commit from the standard format <repo>@<branch-or-commit>:<path>
+__parse_commit() {
+	echo $1 | cut -f 2 -d "@" -s | cut -f 1 -d ":"
+}
+
+# Parses path from the standard format <repo>@<branch-or-commit>:<path>
+__parse_path() {
+	echo $1 | cut -f 2 -d ":" -s
+}
+
+# $*: an integer corresponding to a positional argument index (zero-based)
+# Checks if the argument being completed is a positional argument at one of the
+# specified indices.
+__is_active_arg() {
+  for predicate in $*; do
+    if [[ $predicate == ${#nouns[@]} ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Override this existing function to also ignore ':' characters for splitting words
+__my_init_completion()
+{
+	echo __my_init_completion
+	COMPREPLY=()
+	_get_comp_words_by_ref "$@" -n ":" cur prev words cword
+}
+
+__pachctl_completion() {
+	echo
+	echo __custom_func nouns: "${nouns[@]}", cur: ${cur}
 	case ${last_command} in
-		pachctl_update-repo | pachctl_inspect-repo | pachctl_delete-repo | pachctl_list-commit | pachctl_list-branch)
-			__pachctl_get_repo 0
+		pachctl_update-repo | pachctl_inspect-repo | pachctl_delete-repo | pachctl_list-branch | pachctl_list-commit)
+		  if __is_active_arg 0; then
+				__pachctl_get_repo
+			fi
 			;;
-		pachctl_start-commit | pachctl_subscribe-commit | pachctl_delete-branch)
-			__pachctl_get_repo 0
-			__pachctl_get_branch 1 ${nouns[0]}
+		pachctl_auth_check)
+		  if __is_active_arg 1; then
+				__pachctl_get_repo
+			fi
 			;;
-		pachctl_finish-commit | pachctl_inspect-commit | pachctl_delete-commit | pachctl_glob-file)
-			__pachctl_get_repo 0
-			__pachctl_get_commit 1 ${nouns[0]}
+		pachctl_delete-branch | pachctl_subscribe-commit)
+			if __is_active_arg 0; then
+				__pachctl_get_repo_branch
+			fi
+			;;
+		pachctl_finish-commit | pachctl_inspect-commit | pachctl_delete-commit | pachctl_create-branch | pachctl_start-commit)
+		  if __is_active_arg 0; then
+				__pachctl_get_repo_commit
+			fi
 			;;
 		pachctl_set-branch)
-			__pachctl_get_repo 0
-			__pachctl_get_commit 1 ${nouns[0]}
-			__pachctl_get_branch 1 ${nouns[0]}
+		  if __is_active_arg 0; then
+				__pachctl_get_repo_branch 0
+			elif __is_active_arg 1; then
+				__pachctl_get_branch $(__parse_repo ${nouns[0]})
+			fi
 			;;
-		pachctl_put-file)
-			__pachctl_get_repo 0
-			__pachctl_get_branch 1 ${nouns[0]}
-			__pachctl_get_path 2 ${nouns[0]} ${nouns[1]}
+		pachctl_get-file | pachctl_inspect-file | pachctl_list-file | pachctl_delete-file | pachctl_glob-file | pachctl_put-file)
+		  if __is_active_arg 0; then
+				__pachctl_get_repo_commit_path
+			fi
 			;;
 		pachctl_copy-file | pachctl_diff-file)
-			__pachctl_get_repo 0
-			__pachctl_get_commit 1 ${nouns[0]}
-			__pachctl_get_path 2 ${nouns[0]} ${nouns[1]}
-			__pachctl_get_repo 3
-			__pachctl_get_commit 4 ${nouns[3]}
-			__pachctl_get_path 5 ${nouns[3]} ${nouns[4]}
+		  if __is_active_arg 0 1; then
+				__pachctl_get_repo_commit_path
+			fi
 			;;
-		pachctl_get-file | pachctl_inspect-file | pachctl_list-file | pachctl_delete-file)
-			__pachctl_get_repo 0
-			__pachctl_get_commit 1 ${nouns[0]}
-			__pachctl_get_path 2 ${nouns[0]} ${nouns[1]}
+		pachctl_inspect-job | pachctl_delete-job | pachctl_stop-job | pachctl_list-datum | pachctl_restart-datum)
+			if __is_active_arg 0; then
+				__pachctl_get_job
+			fi
 			;;
-		pachctl_inspect-job | pachctl_delete-job | pachctl_stop-job | pachctl_list-datum)
-			__pachctl_get_job 0
+		pachctl_auth_get)
+			if __is_active_arg 0 1; then
+				__pachctl_get_repo
+			fi
+			;;
+		pachctl_auth_set)
+			if __is_active_arg 2; then
+				__pachctl_get_repo
+			fi
 			;;
 		pachctl_inspect-datum)
-			__pachctl_get_job 0
-			__pachctl_get_datum 1 ${nouns[0]}
+		  if __is_active_arg 0; then
+				__pachctl_get_job
+			elif __is_active_arg 1; then
+				__pachctl_get_datum ${nouns[0]}
+			fi
 			;;
-		pachctl_inspect-pipeline | pachctl_delete-pipeline | pachctl_start-pipeline | pachctl_stop-pipeline | pachctl_run-pipeline)
-			__pachctl_get_pipeline 0
+		pachctl_inspect-pipeline | pachctl_delete-pipeline | pachctl_start-pipeline | pachctl_stop-pipeline | pachctl_extract-pipeline | pachctl_edit-pipeline)
+			if __is_active_arg 0; then
+				__pachctl_get_pipeline
+			fi
+			;;
+		pachctl_flush-job | pachctl_flush-commit)
+			__pachctl_get_repo_commit
 			;;
 		*)
 			;;

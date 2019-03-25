@@ -272,6 +272,7 @@ $ pachctl start-commit test -p XXX
 		}),
 	}
 	startCommit.Flags().StringVarP(&parent, "parent", "p", "", "The parent of the new commit, unneeded if branch is specified and you want to use the previous head of the branch as the parent.")
+	startCommit.MarkFlagCustom("parent", "__pachctl_get_commit $(__parse_repo ${nouns[0]})")
 	startCommit.Flags().StringVarP(&description, "message", "m", "", "A description of this commit's contents")
 	startCommit.Flags().StringVar(&description, "description", "", "A description of this commit's contents (synonym for --message)")
 
@@ -390,6 +391,7 @@ $ pachctl list-commit foo master --from XXX
 	}
 	listCommit.Flags().StringVarP(&from, "from", "f", "", "list all commits since this commit")
 	listCommit.Flags().IntVarP(&number, "number", "n", 0, "list only this many commits; if set to zero, list all commits")
+	listCommit.MarkFlagCustom("from", "__pachctl_get_commit ${nouns[0]}")
 	rawFlag(listCommit)
 	fullTimestampsFlag(listCommit)
 
@@ -462,6 +464,7 @@ $ pachctl flush-commit foo@XXX -r bar -r baz
 		}),
 	}
 	flushCommit.Flags().VarP(&repos, "repos", "r", "Wait only for commits leading to a specific set of repos")
+	flushCommit.MarkFlagCustom("repos", "__pachctl_get_repo")
 	rawFlag(flushCommit)
 	fullTimestampsFlag(flushCommit)
 
@@ -514,6 +517,7 @@ $ pachctl subscribe-commit test@master --new
 		}),
 	}
 	subscribeCommit.Flags().StringVar(&from, "from", "", "subscribe to all commits since this commit")
+	subscribeCommit.MarkFlagCustom("from", "__pachctl_get_commit $(__parse_repo ${nouns[0]})")
 	subscribeCommit.Flags().BoolVar(&newCommits, "new", false, "subscribe to only new commits created from now on")
 	rawFlag(subscribeCommit)
 	fullTimestampsFlag(subscribeCommit)
@@ -559,8 +563,10 @@ $ pachctl subscribe-commit test@master --new
 			return client.CreateBranch(branch.Repo.Name, branch.Name, head, provenance)
 		}),
 	}
-	createBranch.Flags().VarP(&branchProvenance, "provenance", "p", "The provenance for the branch.")
+	createBranch.Flags().VarP(&branchProvenance, "provenance", "p", "The provenance for the branch. format: <repo>@<branch-or-commit>")
+	createBranch.MarkFlagCustom("provenance", "__pachctl_get_repo_commit")
 	createBranch.Flags().StringVarP(&head, "head", "", "", "The head of the newly created branch.")
+	createBranch.MarkFlagCustom("head", "__pachctl_get_commit $(__parse_repo ${nouns[0]})")
 
 	listBranch := &cobra.Command{
 		Use:   "list-branch <repo>",
@@ -1168,6 +1174,7 @@ $ pachctl diff-file foo@master:path1 bar@master:path2
 	}
 	mount.Flags().BoolVarP(&debug, "debug", "d", false, "Turn on debug messages.")
 	mount.Flags().VarP(&commits, "commits", "c", "Commits to mount for repos, arguments should be of the form \"repo@commit\"")
+	mount.MarkFlagCustom("commits", "__pachctl_get_repo_branch")
 
 	unmount := &cobra.Command{
 		Use:   "unmount <path/to/mount/point>",
