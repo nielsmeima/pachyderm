@@ -44,7 +44,6 @@ const (
 __pachctl_get_object() {
 	if pachctl_output=$(eval pachctl $1 2>/dev/null); then
 		local out=($(echo "${pachctl_output}" | awk -v c=$2 'NR > 1 {print $c}'))
-		echo "out: ${out}"
 		COMPREPLY+=($(compgen -P "${__pachctl_prefix}" -S "${__pachctl_suffix}" -W "${out[*]}" "$cur"))
 	fi
 }
@@ -92,32 +91,33 @@ __pachctl_get_repo_branch() {
 
 # Performs completion of the standard format <repo>@<branch-or-commit>:<path>
 __pachctl_get_repo_commit_path() {
-	echo get_repo_commit_path
-	if [[ ${cur} != *@* ]]; then
+	# completion treats ':' as its own argument and an argument-break
+	if [[ ${#nouns[@]} -ge 1 ]] && [[ ${cur} == : ]]; then
+		local repo=$(__parse_repo ${nouns[-1]})
+		local commit=$(__parse_commit ${nouns[-1]})
+		local cur=
+		__pachctl_get_path ${repo} ${commit}
+	elif [[ ${#nouns[@]} -ge 2 ]] && [[ ${nouns[-1]} == : ]]; then
+		local repo=$(__parse_repo ${nouns[-2]})
+		local commit=$(__parse_commit ${nouns[-2]})
+		__pachctl_get_path ${repo} ${commit}
+	elif [[ ${cur} != *@* ]]; then
 		__pachctl_get_repo_commit
-	elif [[ ${cur} != *:* ]]; then
+	else
 		compopt -o nospace
 		local __pachctl_suffix=":"
 		__pachctl_get_repo_commit
-	else
-		local repo=$(__parse_repo ${cur})
-		local commit=$(__parse_commit ${cur})
-		local cur=$(__parse_path ${cur})
-		local __pachctl_prefix="${repo}@${commit}:"
-		echo get path
-		__pachctl_get_path ${repo} ${commit}
 	fi
 }
 
 # $1: repo name
 # $2: branch name or commit id
 __pachctl_get_path() {
-	echo "getting path repo: $1, commit: $2, cur: $cur"
 	if [[ -z $1 ]] || [[ -z $2 ]]; then
 		return
 	fi
 
-	__pachctl_get_object "glob-file $1 $2 \"${cur}**\"" 1
+	__pachctl_get_object "glob-file \"$1@$2:${cur}**\"" 2
 }
 
 # $1: repo name
@@ -140,52 +140,56 @@ __pachctl_get_datum() {
 	__pachctl_get_object "list-datum $2" 1
 }
 
-# Parses repo from the standard format <repo>@<branch-or-commit>:<path>
+# Parses repo from the format <repo>@<branch-or-commit>
 __parse_repo() {
 	echo $1 | cut -f 1 -d "@"
 }
 
-# Parses commit from the standard format <repo>@<branch-or-commit>:<path>
+# Parses commit from the format <repo>@<branch-or-commit>
 __parse_commit() {
-	echo $1 | cut -f 2 -d "@" -s | cut -f 1 -d ":"
+	echo $1 | cut -f 2 -d "@" -s
 }
 
-# Parses path from the standard format <repo>@<branch-or-commit>:<path>
-__parse_path() {
-	echo $1 | cut -f 2 -d ":" -s
+__pachctl_auth_scope() {
+	local out=(none reader writer owner)
+	COMPREPLY+=($(compgen -W "${out[*]}" "$cur"))
 }
 
 # $*: an integer corresponding to a positional argument index (zero-based)
 # Checks if the argument being completed is a positional argument at one of the
 # specified indices.
 __is_active_arg() {
-  for predicate in $*; do
-    if [[ $predicate == ${#nouns[@]} ]]; then
-      return 0
-    fi
-  done
-  return 1
+	for predicate in $*; do
+		if [[ $predicate == ${#nouns[@]} ]]; then
+			return 0
+		fi
+	done
+	return 1
 }
 
-# Override this existing function to also ignore ':' characters for splitting words
-__my_init_completion()
-{
-	echo __my_init_completion
-	COMPREPLY=()
-	_get_comp_words_by_ref "$@" -n ":" cur prev words cword
-}
-
-__pachctl_completion() {
-	echo
-	echo __custom_func nouns: "${nouns[@]}", cur: ${cur}
+__custom_func() {
 	case ${last_command} in
-		pachctl_update-repo | pachctl_inspect-repo | pachctl_delete-repo | pachctl_list-branch | pachctl_list-commit)
+		pachctl_auth_check)
 		  if __is_active_arg 0; then
+				__pachctl_auth_scope
+			elif __is_active_arg 1; then
 				__pachctl_get_repo
 			fi
 			;;
-		pachctl_auth_check)
+		pachctl_auth_get)
+			if __is_active_arg 0 1; then
+				__pachctl_get_repo
+			fi
+			;;
+		pachctl_auth_set)
 		  if __is_active_arg 1; then
+			  __pachctl_auth_scope
+			elif __is_active_arg 2; then
+				__pachctl_get_repo
+			fi
+			;;
+		pachctl_update-repo | pachctl_inspect-repo | pachctl_delete-repo | pachctl_list-branch | pachctl_list-commit)
+			if __is_active_arg 0; then
 				__pachctl_get_repo
 			fi
 			;;
@@ -195,44 +199,33 @@ __pachctl_completion() {
 			fi
 			;;
 		pachctl_finish-commit | pachctl_inspect-commit | pachctl_delete-commit | pachctl_create-branch | pachctl_start-commit)
-		  if __is_active_arg 0; then
+			if __is_active_arg 0; then
 				__pachctl_get_repo_commit
 			fi
 			;;
 		pachctl_set-branch)
-		  if __is_active_arg 0; then
+			if __is_active_arg 0; then
 				__pachctl_get_repo_branch 0
 			elif __is_active_arg 1; then
 				__pachctl_get_branch $(__parse_repo ${nouns[0]})
 			fi
 			;;
 		pachctl_get-file | pachctl_inspect-file | pachctl_list-file | pachctl_delete-file | pachctl_glob-file | pachctl_put-file)
-		  if __is_active_arg 0; then
+			# completion splits the ':' character into its own argument
+			if __is_active_arg 0 1 2; then
 				__pachctl_get_repo_commit_path
 			fi
 			;;
 		pachctl_copy-file | pachctl_diff-file)
-		  if __is_active_arg 0 1; then
-				__pachctl_get_repo_commit_path
-			fi
+			__pachctl_get_repo_commit_path
 			;;
 		pachctl_inspect-job | pachctl_delete-job | pachctl_stop-job | pachctl_list-datum | pachctl_restart-datum)
 			if __is_active_arg 0; then
 				__pachctl_get_job
 			fi
 			;;
-		pachctl_auth_get)
-			if __is_active_arg 0 1; then
-				__pachctl_get_repo
-			fi
-			;;
-		pachctl_auth_set)
-			if __is_active_arg 2; then
-				__pachctl_get_repo
-			fi
-			;;
 		pachctl_inspect-datum)
-		  if __is_active_arg 0; then
+			if __is_active_arg 0; then
 				__pachctl_get_job
 			elif __is_active_arg 1; then
 				__pachctl_get_datum ${nouns[0]}
