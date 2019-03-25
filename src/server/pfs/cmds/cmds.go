@@ -42,14 +42,16 @@ const (
 
 // Cmds returns a slice containing pfs commands.
 func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
+	var commands []*cobra.Command
+
 	raw := false
-	rawFlag := func(cmd *cobra.Command) {
-		cmd.Flags().BoolVar(&raw, "raw", false, "disable pretty printing, print raw json")
-	}
+	rawFlags := pflag.NewFlagSet()
+	rawFlags.BoolVar(&raw, "raw", false, "disable pretty printing, print raw json")
+
 	fullTimestamps := false
-	fullTimestampsFlag := func(cmd *cobra.Command) {
-		cmd.Flags().BoolVar(&fullTimestamps, "full-timestamps", false, "Return absolute timestamps (as opposed to the default, relative timestamps).")
-	}
+	fullTimestampsFlags := pflag.NewFlagSet()
+	fullTimestampsFlags.BoolVar(&fullTimestamps, "full-timestamps", false, "Return absolute timestamps (as opposed to the default, relative timestamps).")
+
 	marshaller := &jsonpb.Marshaler{Indent: "  "}
 
 	repo := &cobra.Command{
@@ -63,7 +65,7 @@ Repos are created with create-repo.
 
 	var description string
 	createRepo := &cobra.Command{
-		Use:   "create-repo <repo>",
+		Use:   "<repo>",
 		Short: "Create a new repo.",
 		Long:  "Create a new repo.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
@@ -83,9 +85,13 @@ Repos are created with create-repo.
 		}),
 	}
 	createRepo.Flags().StringVarP(&description, "description", "d", "", "A description of the repo.")
+	commands = append(commands, cmdutil.CreateAliases(createRepo, [
+		"create repo",
+		"repo create",
+	])
 
 	updateRepo := &cobra.Command{
-		Use:   "update-repo <repo>",
+		Use:   "<repo>",
 		Short: "Update a repo.",
 		Long:  "Update a repo.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
@@ -106,6 +112,10 @@ Repos are created with create-repo.
 		}),
 	}
 	updateRepo.Flags().StringVarP(&description, "description", "d", "", "A description of the repo.")
+	commands = append(commands, cmdutil.CreateAliases(updateRepo, [
+		"update repo",
+		"repo update",
+	])
 
 	inspectRepo := &cobra.Command{
 		Use:   "inspect-repo <repo>",
@@ -134,8 +144,12 @@ Repos are created with create-repo.
 			return pretty.PrintDetailedRepoInfo(ri)
 		}),
 	}
-	rawFlag(inspectRepo)
-	fullTimestampsFlag(inspectRepo)
+	inspectRepo.Flags().AddFlagSet(rawFlags)
+	inspectRepo.Flags().AddFlagSet(fullTimestampsFlags)
+	commands = append(commands, cmdutil.CreateAliases(inspectRepo, [
+		"inspect repo",
+		"repo inspect",
+	])
 
 	listRepo := &cobra.Command{
 		Use:   "list-repo",
@@ -171,8 +185,12 @@ Repos are created with create-repo.
 			return writer.Flush()
 		}),
 	}
-	rawFlag(listRepo)
-	fullTimestampsFlag(listRepo)
+	listRepo.Flags().AddFlagSet(rawFlags)
+	listRepo.Flags().AddFlagSet(fullTimestampsFlags)
+	commands = append(commands, cmdutil.CreateAliases(listRepo, [
+		"list repo",
+		"repo list",
+	])
 
 	var force bool
 	var all bool
@@ -209,6 +227,10 @@ Repos are created with create-repo.
 	}
 	deleteRepo.Flags().BoolVarP(&force, "force", "f", false, "remove the repo regardless of errors; use with care")
 	deleteRepo.Flags().BoolVar(&all, "all", false, "remove all repos")
+	commands = append(commands, cmdutil.CreateAliases(deleteRepo, [
+		"delete repo",
+		"repo delete",
+	])
 
 	commit := &cobra.Command{
 		Use:   "commit",
@@ -227,6 +249,7 @@ Commits can be created with another commit as a parent.
 This layers the data in the commit over the data in the parent.
 `,
 	}
+	commands = append(commands, cmdutil.CreateAliases(commit, ["commit"])
 
 	var parent string
 	startCommit := &cobra.Command{
@@ -275,6 +298,10 @@ $ pachctl start-commit test -p XXX
 	startCommit.MarkFlagCustom("parent", "__pachctl_get_commit $(__parse_repo ${nouns[0]})")
 	startCommit.Flags().StringVarP(&description, "message", "m", "", "A description of this commit's contents")
 	startCommit.Flags().StringVar(&description, "description", "", "A description of this commit's contents (synonym for --message)")
+	commands = append(commands, cmdutil.CreateAliases(startCommit, [
+		"start commit",
+		"commit start",
+	])
 
 	finishCommit := &cobra.Command{
 		Use:   "finish-commit <repo>@<branch-or-commit>",
@@ -303,6 +330,10 @@ $ pachctl start-commit test -p XXX
 	}
 	finishCommit.Flags().StringVarP(&description, "message", "m", "", "A description of this commit's contents (overwrites any existing commit description)")
 	finishCommit.Flags().StringVar(&description, "description", "", "A description of this commit's contents (synonym for --message)")
+	commands = append(commands, cmdutil.CreateAliases(finishCommit, [
+		"finish commit",
+		"commit finish",
+	])
 
 	inspectCommit := &cobra.Command{
 		Use:   "inspect-commit <repo>@<branch-or-commit>",
@@ -336,8 +367,12 @@ $ pachctl start-commit test -p XXX
 			return pretty.PrintDetailedCommitInfo(ci)
 		}),
 	}
-	rawFlag(inspectCommit)
-	fullTimestampsFlag(inspectCommit)
+	inspectCommit.Flags().AddFlagSet(rawFlags)
+	inspectCommit.Flags().AddFlagSet(fullTimestampsFlags)
+	commands = append(commands, cmdutil.CreateAliases(inspectCommit, [
+		"inspect commit",
+		"commit inspect",
+	])
 
 	var from string
 	var number int
@@ -392,8 +427,12 @@ $ pachctl list-commit foo master --from XXX
 	listCommit.Flags().StringVarP(&from, "from", "f", "", "list all commits since this commit")
 	listCommit.Flags().IntVarP(&number, "number", "n", 0, "list only this many commits; if set to zero, list all commits")
 	listCommit.MarkFlagCustom("from", "__pachctl_get_commit ${nouns[0]}")
-	rawFlag(listCommit)
-	fullTimestampsFlag(listCommit)
+	listCommit.Flags().AddFlagSet(rawFlags)
+	listCommit.Flags().AddFlagSet(fullTimestampsFlags)
+	commands = append(commands, cmdutil.CreateAliases(listCommit, [
+		"list commit",
+		"commit list",
+	])
 
 	printCommitIter := func(commitIter client.CommitInfoIterator) error {
 		if raw {
@@ -465,8 +504,12 @@ $ pachctl flush-commit foo@XXX -r bar -r baz
 	}
 	flushCommit.Flags().VarP(&repos, "repos", "r", "Wait only for commits leading to a specific set of repos")
 	flushCommit.MarkFlagCustom("repos", "__pachctl_get_repo")
-	rawFlag(flushCommit)
-	fullTimestampsFlag(flushCommit)
+	flushCommit.Flags().AddFlagSet(rawFlags)
+	flushCommit.Flags().AddFlagSet(fullTimestampsFlags)
+	commands = append(commands, cmdutil.CreateAliases(flushCommit, [
+		"flush commit",
+		"commit flush",
+	])
 
 	var newCommits bool
 	subscribeCommit := &cobra.Command{
@@ -519,8 +562,12 @@ $ pachctl subscribe-commit test@master --new
 	subscribeCommit.Flags().StringVar(&from, "from", "", "subscribe to all commits since this commit")
 	subscribeCommit.MarkFlagCustom("from", "__pachctl_get_commit $(__parse_repo ${nouns[0]})")
 	subscribeCommit.Flags().BoolVar(&newCommits, "new", false, "subscribe to only new commits created from now on")
-	rawFlag(subscribeCommit)
-	fullTimestampsFlag(subscribeCommit)
+	subscribeCommit.Flags().AddFlagSet(rawFlags)
+	subscribeCommit.Flags().AddFlagSet(fullTimestampsFlags)
+	commands = append(commands, cmdutil.CreateAliases(subscribeCommit, [
+		"subscribe commit",
+		"commit subscribe",
+	])
 
 	deleteCommit := &cobra.Command{
 		Use:   "delete-commit <repo>@<branch-or-commit>",
@@ -539,6 +586,10 @@ $ pachctl subscribe-commit test@master --new
 			return client.DeleteCommit(commit.Repo.Name, commit.ID)
 		}),
 	}
+	commands = append(commands, cmdutil.CreateAliases(deleteCommit, [
+		"delete commit",
+		"commit delete",
+	])
 
 	var branchProvenance cmdutil.RepeatedStringArg
 	var head string
@@ -567,6 +618,10 @@ $ pachctl subscribe-commit test@master --new
 	createBranch.MarkFlagCustom("provenance", "__pachctl_get_repo_commit")
 	createBranch.Flags().StringVarP(&head, "head", "", "", "The head of the newly created branch.")
 	createBranch.MarkFlagCustom("head", "__pachctl_get_commit $(__parse_repo ${nouns[0]})")
+	commands = append(commands, cmdutil.CreateAliases(createBranch, [
+		"create branch",
+		"branch create",
+	])
 
 	listBranch := &cobra.Command{
 		Use:   "list-branch <repo>",
@@ -597,7 +652,11 @@ $ pachctl subscribe-commit test@master --new
 			return writer.Flush()
 		}),
 	}
-	rawFlag(listBranch)
+	listBranch.Flags().AddFlagSet(rawFlags)
+	commands = append(commands, cmdutil.CreateAliases(listBranch, [
+		"list branch",
+		"branch list",
+	])
 
 	setBranch := &cobra.Command{
 		Use:   "set-branch <repo>@<branch-or-commit> <new-branch>",
@@ -627,6 +686,10 @@ $ pachctl set-branch foo@test master` + codeend,
 			return client.SetBranch(commit.Repo.Name, commit.ID, args[1])
 		}),
 	}
+	commands = append(commands, cmdutil.CreateAliases(setBranch, [
+		"set branch",
+		"branch set",
+	])
 
 	deleteBranch := &cobra.Command{
 		Use:   "delete-branch <repo>@<branch-or-commit>",
@@ -646,9 +709,12 @@ $ pachctl set-branch foo@test master` + codeend,
 		}),
 	}
 	deleteBranch.Flags().BoolVarP(&force, "force", "f", false, "remove the branch regardless of errors; use with care")
+	commands = append(commands, cmdutil.CreateAliases(deleteBranch, [
+		"delete branch",
+		"branch delete",
+	])
 
 	file := &cobra.Command{
-		Use:   "file",
 		Short: "Docs for files.",
 		Long: `Files are the lowest level data object in Pachyderm.
 
@@ -656,6 +722,7 @@ Files can be written to started (but not finished) commits with put-file.
 Files can be read from finished commits with get-file.
 `,
 	}
+	commands = append(commands, cmdutil.CreateAliases(file, ["file"])
 
 	var filePaths []string
 	var recursive bool
@@ -815,6 +882,10 @@ $ pachctl put-file repo branch -i http://host/path
 	putFile.Flags().UintVar(&headerRecords, "header-records", 0, "the number of records that will be converted to a PFS 'header', and prepended to future retrievals of any subset of data from PFS; needs to be used with --split=(json|line|csv)")
 	putFile.Flags().BoolVarP(&putFileCommit, "commit", "c", false, "DEPRECATED: Put file(s) in a new commit.")
 	putFile.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "Overwrite the existing content of the file, either from previous commits or previous calls to put-file within this commit.")
+	commands = append(commands, cmdutil.CreateAliases(putFile, [
+		"put file",
+		"file put",
+	])
 
 	copyFile := &cobra.Command{
 		Use:   "copy-file <src-repo>@<src-branch-or-commit>:<src-path> <dst-repo>@<dst-branch-or-commit>:<dst-path>",
@@ -842,6 +913,10 @@ $ pachctl put-file repo branch -i http://host/path
 		}),
 	}
 	copyFile.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "Overwrite the existing content of the file, either from previous commits or previous calls to put-file within this commit.")
+	commands = append(commands, cmdutil.CreateAliases(copyFile, [
+		"copy file",
+		"file copy",
+	])
 
 	var outputPath string
 	getFile := &cobra.Command{
@@ -894,6 +969,10 @@ $ pachctl get-file foo@master^2:XXX
 	getFile.Flags().BoolVarP(&recursive, "recursive", "r", false, "Recursively download a directory.")
 	getFile.Flags().StringVarP(&outputPath, "output", "o", "", "The path where data will be downloaded.")
 	getFile.Flags().IntVarP(&parallelism, "parallelism", "p", DefaultParallelism, "The maximum number of files that can be downloaded in parallel")
+	commands = append(commands, cmdutil.CreateAliases(getFile, [
+		"get file",
+		"file get",
+	])
 
 	inspectFile := &cobra.Command{
 		Use:   "inspect-file <repo>@<branch-or-commit>:<path/in/pfs>",
@@ -922,7 +1001,11 @@ $ pachctl get-file foo@master^2:XXX
 			return pretty.PrintDetailedFileInfo(fileInfo)
 		}),
 	}
-	rawFlag(inspectFile)
+	inspectFile.Flags().AddFlagSet(rawFlags)
+	commands = append(commands, cmdutil.CreateAliases(inspectFile, [
+		"inspect file",
+		"file inspect",
+	])
 
 	var history int64
 	listFile := &cobra.Command{
@@ -977,9 +1060,13 @@ $ pachctl list-file foo@master --history -1
 			return writer.Flush()
 		}),
 	}
-	rawFlag(listFile)
-	fullTimestampsFlag(listFile)
+	listFile.Flags().AddFlagSet(rawFlags)
+	listFile.Flags().AddFlagSet(fullTimestampsFlags)
 	listFile.Flags().Int64Var(&history, "history", 0, "Return revision history for files.")
+	commands = append(commands, cmdutil.CreateAliases(listFile, [
+		"list file",
+		"file list",
+	])
 
 	globFile := &cobra.Command{
 		Use:   "glob-file <repo>@<branch-or-commit>:<pattern>",
@@ -1027,8 +1114,12 @@ $ pachctl glob-file "foo@master:data/*"
 			return writer.Flush()
 		}),
 	}
-	rawFlag(globFile)
-	fullTimestampsFlag(globFile)
+	globFile.Flags().AddFlagSet(rawFlags)
+	globFile.Flags().AddFlagSet(fullTimestampsFlags)
+	commands = append(commands, cmdutil.CreateAliases(globFile, [
+		"glob file",
+		"file glob",
+	])
 
 	var shallow bool
 	diffFile := &cobra.Command{

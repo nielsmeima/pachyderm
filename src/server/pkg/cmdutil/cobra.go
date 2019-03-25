@@ -227,3 +227,9 @@ Additional help topics:{{range .Commands}}{{if .IsHelpCommand}}
         return nil
     })
 }
+
+func CreateAliases([]string invocations, cmd *cobra.Command) []*cobra.Command {
+}
+
+func MergeCommands([]*cobra.Command) []*cobra.Command) {
+}

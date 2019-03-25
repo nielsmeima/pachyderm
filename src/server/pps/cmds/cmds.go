@@ -40,13 +40,13 @@ const (
 // Cmds returns a slice containing pps commands.
 func Cmds(noMetrics *bool, noPortForwarding *bool) ([]*cobra.Command, error) {
 	raw := false
-	rawFlag := func(cmd *cobra.Command) {
-		cmd.Flags().BoolVar(&raw, "raw", false, "disable pretty printing, print raw json")
-	}
+	rawFlags := pflag.NewFlagSet()
+	rawFlags.BoolVar(&raw, "raw", false, "disable pretty printing, print raw json")
+
 	fullTimestamps := false
-	fullTimestampsFlag := func(cmd *cobra.Command) {
-		cmd.Flags().BoolVar(&fullTimestamps, "full-timestamps", false, "Return absolute timestamps (as opposed to the default, relative timestamps).")
-	}
+	fullTimestampsFlags := pflag.NewFlagSet()
+	fullTimestampsFlags.BoolVar(&fullTimestamps, "full-timestamps", false, "Return absolute timestamps (as opposed to the default, relative timestamps).")
+
 	marshaller := &jsonpb.Marshaler{
 		Indent:   "  ",
 		OrigName: true,
@@ -99,8 +99,8 @@ To increase the throughput of a job, increase the 'shard' parameter.
 		}),
 	}
 	inspectJob.Flags().BoolVarP(&block, "block", "b", false, "block until the job has either succeeded or failed")
-	rawFlag(inspectJob)
-	fullTimestampsFlag(inspectJob)
+	inspectJob.Flags().AddFlagSet(rawFlags)
+	inspectJob.Flags().AddFlagSet(fullTimestampsFlags)
 
 	var pipelineName string
 	var outputCommitStr string
@@ -168,8 +168,8 @@ $ pachctl list-job -p foo -i bar@YYY
 	listJob.MarkFlagCustom("output", "__pachctl_get_repo_commit")
 	listJob.Flags().StringSliceVarP(&inputCommitStrs, "input", "i", []string{}, "List jobs with a specific set of input commits. format: <repo>@<branch-or-commit>")
 	listJob.MarkFlagCustom("input", "__pachctl_get_repo_commit")
-	fullTimestampsFlag(listJob)
-	rawFlag(listJob)
+	listJob.Flags().AddFlagSet(rawFlags)
+	listJob.Flags().AddFlagSet(fullTimestampsFlags)
 
 	var pipelines cmdutil.RepeatedStringArg
 	flushJob := &cobra.Command{
@@ -220,8 +220,8 @@ $ pachctl flush-job foo@XXX -p bar -p baz
 	}
 	flushJob.Flags().VarP(&pipelines, "pipeline", "p", "Wait only for jobs leading to a specific set of pipelines")
 	flushJob.MarkFlagCustom("pipeline", "__pachctl_get_pipeline")
-	rawFlag(flushJob)
-	fullTimestampsFlag(flushJob)
+	flushJob.Flags().AddFlagSet(rawFlags)
+	flushJob.Flags().AddFlagSet(fullTimestampsFlags)
 
 	deleteJob := &cobra.Command{
 		Use:   "delete-job <job>",
@@ -314,9 +314,9 @@ $ pachctl flush-job foo@XXX -p bar -p baz
 			return writer.Flush()
 		}),
 	}
-	rawFlag(listDatum)
 	listDatum.Flags().Int64Var(&pageSize, "pageSize", 0, "Specify the number of results sent back in a single page")
 	listDatum.Flags().Int64Var(&page, "page", 0, "Specify the page of results to send")
+	listDatum.Flags().AddFlagSet(rawFlags)
 
 	inspectDatum := &cobra.Command{
 		Use:   "inspect-datum <job> <datum>",
@@ -339,7 +339,7 @@ $ pachctl flush-job foo@XXX -p bar -p baz
 			return nil
 		}),
 	}
-	rawFlag(inspectDatum)
+	inspectDatum.Flags().AddFlagSet(rawFlags)
 
 	var (
 		jobID       string
@@ -497,8 +497,8 @@ All jobs created by a pipeline will create commits in the pipeline's repo.
 			return pretty.PrintDetailedPipelineInfo(pi)
 		}),
 	}
-	rawFlag(inspectPipeline)
-	fullTimestampsFlag(inspectPipeline)
+	inspectPipeline.Flags().AddFlagSet(rawFlags)
+	inspectPipeline.Flags().AddFlagSet(fullTimestampsFlags)
 
 	extractPipeline := &cobra.Command{
 		Use:   "extract-pipeline <pipeline>",
@@ -625,9 +625,9 @@ All jobs created by a pipeline will create commits in the pipeline's repo.
 			return writer.Flush()
 		}),
 	}
-	rawFlag(listPipeline)
-	fullTimestampsFlag(listPipeline)
 	listPipeline.Flags().BoolVarP(&spec, "spec", "s", false, "Output create-pipeline compatibility specs.")
+	listPipeline.Flags().AddFlagSet(rawFlags)
+	listPipeline.Flags().AddFlagSet(fullTimestampsFlags)
 
 	var all bool
 	var force bool
