@@ -34,6 +34,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
@@ -251,10 +252,11 @@ func PachctlCmd() (*cobra.Command, error) {
 	var verbose bool
 	var noMetrics bool
 	var noPortForwarding bool
+
 	raw := false
-	rawFlag := func(cmd *cobra.Command) {
-		cmd.Flags().BoolVar(&raw, "raw", false, "disable pretty printing, print raw json")
-	}
+	rawFlags := pflag.NewFlagSet("", pflag.ContinueOnError)
+	rawFlags.BoolVar(&raw, "raw", false, "disable pretty printing, print raw json")
+
 	marshaller := &jsonpb.Marshaler{Indent: "  "}
 
 	rootCmd := &cobra.Command{
@@ -296,37 +298,8 @@ Environment variables:
 	rootCmd.PersistentFlags().BoolVarP(&noMetrics, "no-metrics", "", false, "Don't report user metrics for this command")
 	rootCmd.PersistentFlags().BoolVarP(&noPortForwarding, "no-port-forwarding", "", false, "Disable implicit port forwarding")
 
-	pfsCmds := pfscmds.Cmds(&noMetrics, &noPortForwarding)
-	for _, cmd := range pfsCmds {
-		rootCmd.AddCommand(cmd)
-	}
-	ppsCmds, err := ppscmds.Cmds(&noMetrics, &noPortForwarding)
-	if err != nil {
-		return nil, err
-	}
-	for _, cmd := range ppsCmds {
-		rootCmd.AddCommand(cmd)
-	}
-	deployCmds := deploycmds.Cmds(&noMetrics, &noPortForwarding)
-	for _, cmd := range deployCmds {
-		rootCmd.AddCommand(cmd)
-	}
-	authCmds := authcmds.Cmds(&noMetrics, &noPortForwarding)
-	for _, cmd := range authCmds {
-		rootCmd.AddCommand(cmd)
-	}
-	enterpriseCmds := enterprisecmds.Cmds(&noMetrics, &noPortForwarding)
-	for _, cmd := range enterpriseCmds {
-		rootCmd.AddCommand(cmd)
-	}
-	adminCmds := admincmds.Cmds(&noMetrics, &noPortForwarding)
-	for _, cmd := range adminCmds {
-		rootCmd.AddCommand(cmd)
-	}
-	debugCmds := debugcmds.Cmds(&noMetrics, &noPortForwarding)
-	for _, cmd := range debugCmds {
-		rootCmd.AddCommand(cmd)
-	}
+
+	var subcommands []*cobra.Command
 
 	var clientOnly bool
 	var timeoutFlag string
@@ -415,15 +388,15 @@ Environment variables:
 	versionCmd.Flags().BoolVar(&clientOnly, "client-only", false, "If set, "+
 		"only print pachctl's version, but don't make any RPCs to pachd. Useful "+
 		"if pachd is unavailable")
-	rawFlag(versionCmd)
 	versionCmd.Flags().StringVar(&timeoutFlag, "timeout", "default", "If set, "+
 		"pachctl version will timeout after the given duration (formatted as a "+
 		"golang time duration--a number followed by ns, us, ms, s, m, or h). If "+
 		"--client-only is set, this flag is ignored. If unset, pachctl will use a "+
 		"default timeout; if set to 0s, the call will never time out.")
+	versionCmd.Flags().AddFlagSet(rawFlags)
+	subcommands = append(subcommands, versionCmd)
 
 	deleteAll := &cobra.Command{
-		Use:   "delete-all",
 		Short: "Delete everything.",
 		Long: `Delete all repos, commits, files, pipelines and jobs.
 This resets the cluster to its initial state.`,
@@ -468,6 +441,8 @@ This resets the cluster to its initial state.`,
 			return nil
 		}),
 	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(deleteAll, []string{"delete all"})...)
+
 	var port uint16
 	var remotePort uint16
 	var samlPort uint16
@@ -475,7 +450,6 @@ This resets the cluster to its initial state.`,
 	var uiWebsocketPort uint16
 	var pfsPort uint16
 	var namespace string
-
 	portForward := &cobra.Command{
 		Use:   "port-forward",
 		Short: "Forward a port on the local machine to pachd. This command blocks.",
@@ -543,6 +517,7 @@ This resets the cluster to its initial state.`,
 	portForward.Flags().Uint16VarP(&uiWebsocketPort, "proxy-port", "x", 30081, "The local port to bind Pachyderm's dash proxy service to.")
 	portForward.Flags().Uint16VarP(&pfsPort, "pfs-port", "f", 30652, "The local port to bind PFS over HTTP to.")
 	portForward.Flags().StringVar(&namespace, "namespace", "default", "Kubernetes namespace Pachyderm is deployed in.")
+	subcommands = append(subcommands, portForward)
 
 	var install bool
 	var path string
@@ -581,11 +556,17 @@ This resets the cluster to its initial state.`,
 	}
 	completion.Flags().BoolVar(&install, "install", false, "Install the completion.")
 	completion.Flags().StringVar(&path, "path", "/etc/bash_completion.d/pachctl", "Path to install the completion to. This will default to `/etc/bash_completion.d/` if unspecified.")
+	subcommands = append(subcommands, completion)
 
-	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(deleteAll)
-	rootCmd.AddCommand(portForward)
-	rootCmd.AddCommand(completion)
+	subcommands = append(subcommands, pfscmds.Cmds(&noMetrics, &noPortForwarding)...)
+	subcommands = append(subcommands, ppscmds.Cmds(&noMetrics, &noPortForwarding)...)
+	subcommands = append(subcommands, deploycmds.Cmds(&noMetrics, &noPortForwarding)...)
+	subcommands = append(subcommands, authcmds.Cmds(&noMetrics, &noPortForwarding)...)
+	subcommands = append(subcommands, enterprisecmds.Cmds(&noMetrics, &noPortForwarding)...)
+	subcommands = append(subcommands, admincmds.Cmds(&noMetrics, &noPortForwarding)...)
+	subcommands = append(subcommands, debugcmds.Cmds(&noMetrics, &noPortForwarding)...)
+
+	cmdutil.MergeCommands(rootCmd, subcommands)
 	return rootCmd, nil
 }
 
