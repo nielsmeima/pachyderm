@@ -525,7 +525,7 @@ particular backend, run "pachctl deploy storage <backend>"`,
 	})...)
 
 	exportImages := &cobra.Command{
-		Use:   "<output-file>",
+		Use:   "{{alias}} <output-file>",
 		Short: "Export a tarball (to stdout) containing all of the images in a deployment.",
 		Long:  "Export a tarball (to stdout) containing all of the images in a deployment.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) (retErr error) {
@@ -547,7 +547,7 @@ particular backend, run "pachctl deploy storage <backend>"`,
 	})...)
 
 	importImages := &cobra.Command{
-		Use:   "<input-file>",
+		Use:   "{{alias}} <input-file>",
 		Short: "Import a tarball (from stdin) containing all of the images in a deployment and push them to a private registry.",
 		Long:  "Import a tarball (from stdin) containing all of the images in a deployment and push them to a private registry.",
 		Run: cmdutil.RunFixedArgs(1, func(args []string) (retErr error) {

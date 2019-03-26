@@ -62,10 +62,10 @@ Repos are created with create-repo.
 
 	var description string
 	createRepo := &cobra.Command{
-		Use:   "<repo>",
+		Use:   "{{alias}} <repo>",
 		Short: "Create a new repo.",
 		Long:  "Create a new repo.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -88,10 +88,10 @@ Repos are created with create-repo.
 	})...)
 
 	updateRepo := &cobra.Command{
-		Use:   "<repo>",
+		Use:   "{{alias}} <repo>",
 		Short: "Update a repo.",
 		Long:  "Update a repo.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -115,10 +115,10 @@ Repos are created with create-repo.
 	})...)
 
 	inspectRepo := &cobra.Command{
-		Use:   "<repo>",
+		Use:   "{{alias}} <repo>",
 		Short: "Return info about a repo.",
 		Long:  "Return info about a repo.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -191,10 +191,10 @@ Repos are created with create-repo.
 	var force bool
 	var all bool
 	deleteRepo := &cobra.Command{
-		Use:   "<repo>",
+		Use:   "{{alias}} <repo>",
 		Short: "Delete a repo.",
 		Long:  "Delete a repo.",
-		Run: cmdutil.RunBoundedArgs(0, 1, func(args []string) error {
+		Run:   cmdutil.RunBoundedArgs(0, 1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -248,21 +248,21 @@ This layers the data in the commit over the data in the parent.
 
 	var parent string
 	startCommit := &cobra.Command{
-		Use:     "<repo>@<branch-or-commit>",
+		Use:     "{{alias}} <repo>@<branch-or-commit>",
 		Short:   "Start a new commit.",
 		Long:    "Start a new commit with parent-commit as the parent, or start a commit on the given branch; if the branch does not exist, it will be created.",
 		Example: `# Start a new commit in repo "test" that's not on any branch
-$ pachctl start-commit test
+$ pachctl {{alias}} test
 
 # Start a commit in repo "test" on branch "master"
-$ pachctl start-commit test@master
+$ pachctl {{alias}} test@master
 
 # Start a commit with "master" as the parent in repo "test", on a new branch "patch"; essentially a fork.
-$ pachctl start-commit test@patch -p master
+$ pachctl {{alias}} test@patch -p master
 
 # Start a commit with XXX as the parent in repo "test", not on any branch
-$ pachctl start-commit test -p XXX`,
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+$ pachctl {{alias}} test -p XXX`,
+		Run:     cmdutil.RunFixedArgs(1, func(args []string) error {
 			branch, err := cmdutil.ParseBranch(args[0])
 			if err != nil {
 				return err
@@ -295,10 +295,10 @@ $ pachctl start-commit test -p XXX`,
 	})...)
 
 	finishCommit := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit>",
+		Use:   "{{alias}} <repo>@<branch-or-commit>",
 		Short: "Finish a started commit.",
 		Long:  "Finish a started commit. Commit-id must be a writeable commit.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			commit, err := cmdutil.ParseCommit(args[0])
 			if err != nil {
 				return err
@@ -327,10 +327,10 @@ $ pachctl start-commit test -p XXX`,
 	})...)
 
 	inspectCommit := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit>",
+		Use:   "{{alias}} <repo>@<branch-or-commit>",
 		Short: "Return info about a commit.",
 		Long:  "Return info about a commit.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			commit, err := cmdutil.ParseCommit(args[0])
 			if err != nil {
 				return err
@@ -368,25 +368,25 @@ $ pachctl start-commit test -p XXX`,
 	var from string
 	var number int
 	listCommit := &cobra.Command{
-		Use:   "<repo>",
-		Short: "Return all commits on a set of repos.",
-		Long: "Return all commits on a set of repos.",
+		Use:     "{{alias}} <repo>",
+		Short:   "Return all commits on a set of repos.",
+		Long:    "Return all commits on a set of repos.",
 		Example: `
 # return commits in repo "foo"
-$ pachctl list-commit foo
+$ pachctl {{alias}} foo
 
 # return commits in repo "foo" on branch "master"
-$ pachctl list-commit foo master
+$ pachctl {{alias}} foo master
 
 # return the last 20 commits in repo "foo" on branch "master"
-$ pachctl list-commit foo master -n 20
+$ pachctl {{alias}} foo master -n 20
 
 # return commits that are the ancestors of XXX
-$ pachctl list-commit foo XXX
+$ pachctl {{alias}} foo XXX
 
 # return commits in repo "foo" since commit XXX
-$ pachctl list-commit foo master --from XXX`,
-		Run: cmdutil.RunBoundedArgs(1, 2, func(args []string) (retErr error) {
+$ pachctl {{alias}} foo master --from XXX`,
+		Run:     cmdutil.RunBoundedArgs(1, 2, func(args []string) (retErr error) {
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -453,16 +453,16 @@ $ pachctl list-commit foo master --from XXX`,
 
 	var repos cmdutil.RepeatedStringArg
 	flushCommit := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit> ...",
-		Short: "Wait for all commits caused by the specified commits to finish and return them.",
-		Long: "Wait for all commits caused by the specified commits to finish and return them.",
+		Use:     "{{alias}} <repo>@<branch-or-commit> ...",
+		Short:   "Wait for all commits caused by the specified commits to finish and return them.",
+		Long:    "Wait for all commits caused by the specified commits to finish and return them.",
 		Example: `
 # return commits caused by foo@XXX and bar@YYY
-$ pachctl flush-commit foo@XXX bar@YYY
+$ pachctl {{alias}} foo@XXX bar@YYY
 
 # return commits caused by foo@XXX leading to repos bar and baz
-$ pachctl flush-commit foo@XXX -r bar -r baz`,
-		Run: cmdutil.Run(func(args []string) error {
+$ pachctl {{alias}} foo@XXX -r bar -r baz`,
+		Run:     cmdutil.Run(func(args []string) error {
 			commits, err := cmdutil.ParseCommits(args)
 			if err != nil {
 				return err
@@ -498,19 +498,19 @@ $ pachctl flush-commit foo@XXX -r bar -r baz`,
 
 	var newCommits bool
 	subscribeCommit := &cobra.Command{
-		Use:   "<repo>@<branch>",
-		Short: "Print commits as they are created (finished).",
-		Long: "Print commits as they are created in the specified repo and branch.  By default, all existing commits on the specified branch are returned first.  A commit is only considered 'created' when it's been finished.",
+		Use:     "{{alias}} <repo>@<branch>",
+		Short:   "Print commits as they are created (finished).",
+		Long:    "Print commits as they are created in the specified repo and branch.  By default, all existing commits on the specified branch are returned first.  A commit is only considered 'created' when it's been finished.",
 		Example: `
 # subscribe to commits in repo "test" on branch "master"
-$ pachctl subscribe-commit test@master
+$ pachctl {{alias}} test@master
 
 # subscribe to commits in repo "test" on branch "master", but only since commit XXX.
-$ pachctl subscribe-commit test@master --from XXX
+$ pachctl {{alias}} test@master --from XXX
 
 # subscribe to commits in repo "test" on branch "master", but only for new commits created from now on.
-$ pachctl subscribe-commit test@master --new`,
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+$ pachctl {{alias}} test@master --new`,
+		Run:     cmdutil.RunFixedArgs(1, func(args []string) error {
 			branch, err := cmdutil.ParseBranch(args[0])
 			if err != nil {
 				return err
@@ -522,7 +522,7 @@ $ pachctl subscribe-commit test@master --new`,
 			defer c.Close()
 
 			if newCommits && from != "" {
-				return fmt.Errorf("--new and --from cannot both be provided")
+				return fmt.Errorf("--new and --from cannot be used together")
 			}
 
 			if newCommits {
@@ -548,10 +548,10 @@ $ pachctl subscribe-commit test@master --new`,
 	})...)
 
 	deleteCommit := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit>",
+		Use:   "{{alias}} <repo>@<branch-or-commit>",
 		Short: "Delete an input commit.",
 		Long:  "Delete an input commit. An input is a commit which is not the output of a pipeline.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			commit, err := cmdutil.ParseCommit(args[0])
 			if err != nil {
 				return err
@@ -572,10 +572,10 @@ $ pachctl subscribe-commit test@master --new`,
 	var branchProvenance cmdutil.RepeatedStringArg
 	var head string
 	createBranch := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit>",
+		Use:   "{{alias}} <repo>@<branch-or-commit>",
 		Short: "Create a new branch, or update an existing branch, on a repo.",
 		Long:  "Create a new branch, or update an existing branch, on a repo, starting a commit on the branch will also create it, so there's often no need to call this.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			branch, err := cmdutil.ParseBranch(args[0])
 			if err != nil {
 				return err
@@ -602,10 +602,10 @@ $ pachctl subscribe-commit test@master --new`,
 	})...)
 
 	listBranch := &cobra.Command{
-		Use:   "<repo>",
+		Use:   "{{alias}} <repo>",
 		Short: "Return all branches on a repo.",
 		Long:  "Return all branches on a repo.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -636,41 +636,11 @@ $ pachctl subscribe-commit test@master --new`,
 		"branch list",
 	})...)
 
-	setBranch := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit> <new-branch>",
-		Short: "DEPRECATED Set a commit and its ancestors to a branch",
-		Long: "DEPRECATED Set a commit and its ancestors to a branch.",
-		Example: `
-# Set commit XXX and its ancestors as branch master in repo foo.
-$ pachctl set-branch foo@XXX master
-
-# Set the head of branch test as branch master in repo foo.
-# After running this command, "test" and "master" both point to the same commit.
-$ pachctl set-branch foo@test master`,
-		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
-			fmt.Fprintf(os.Stderr, "set-branch is DEPRECATED, use create-branch instead.\n")
-			commit, err := cmdutil.ParseCommit(args[0])
-			if err != nil {
-				return err
-			}
-			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
-			if err != nil {
-				return err
-			}
-			defer client.Close()
-			return client.SetBranch(commit.Repo.Name, commit.ID, args[1])
-		}),
-	}
-	commands = append(commands, cmdutil.CreateAliases(setBranch, []string{
-		"set branch",
-		"branch set",
-	})...)
-
 	deleteBranch := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit>",
+		Use:   "{{alias}} <repo>@<branch-or-commit>",
 		Short: "Delete a branch",
 		Long:  "Delete a branch, while leaving the commits intact",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			branch, err := cmdutil.ParseBranch(args[0])
 			if err != nil {
 				return err
@@ -710,49 +680,49 @@ Files can be read from finished commits with get-file.
 	var putFileCommit bool
 	var overwrite bool
 	putFile := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit>[:<path/in/pfs>]",
-		Short: "Put a file into the filesystem.",
-		Long: "Put-file supports a number of ways to insert data into pfs:",
+		Use:     "{{alias}} <repo>@<branch-or-commit>[:<path/in/pfs>]",
+		Short:   "Put a file into the filesystem.",
+		Long:    "Put-file supports a number of ways to insert data into pfs:",
 		Example: `
 # Put data from stdin as repo/branch/path:
-$ echo "data" | pachctl put-file repo branch path
+$ echo "data" | pachctl {{alias}} repo branch path
 
 # Put data from stdin as repo/branch/path and start / finish a new commit on the branch.
-$ echo "data" | pachctl put-file -c repo branch path
+$ echo "data" | pachctl {{alias}} -c repo branch path
 
 # Put a file from the local filesystem as repo/branch/path:
-$ pachctl put-file repo branch path -f file
+$ pachctl {{alias}} repo branch path -f file
 
 # Put a file from the local filesystem as repo/branch/file:
-$ pachctl put-file repo branch -f file
+$ pachctl {{alias}} repo branch -f file
 
 # Put the contents of a directory as repo/branch/path/dir/file:
-$ pachctl put-file -r repo branch path -f dir
+$ pachctl {{alias}} -r repo branch path -f dir
 
 # Put the contents of a directory as repo/branch/dir/file:
-$ pachctl put-file -r repo branch -f dir
+$ pachctl {{alias}} -r repo branch -f dir
 
 # Put the contents of a directory as repo/branch/file, i.e. put files at the top level:
-$ pachctl put-file -r repo branch / -f dir
+$ pachctl {{alias}} -r repo branch / -f dir
 
 # Put the data from a URL as repo/branch/path:
-$ pachctl put-file repo branch path -f http://host/path
+$ pachctl {{alias}} repo branch path -f http://host/path
 
 # Put the data from a URL as repo/branch/path:
-$ pachctl put-file repo branch -f http://host/path
+$ pachctl {{alias}} repo branch -f http://host/path
 
 # Put the data from an S3 bucket as repo/branch/s3_object:
-$ pachctl put-file repo branch -r -f s3://my_bucket
+$ pachctl {{alias}} repo branch -r -f s3://my_bucket
 
 # Put several files or URLs that are listed in file.
 # Files and URLs should be newline delimited.
-$ pachctl put-file repo branch -i file
+$ pachctl {{alias}} repo branch -i file
 
 # Put several files or URLs that are listed at URL.
 # NOTE this URL can reference local files, so it could cause you to put sensitive
 # files into your Pachyderm cluster.
-$ pachctl put-file repo branch -i http://host/path`,
-		Run: cmdutil.RunFixedArgs(1, func(args []string) (retErr error) {
+$ pachctl {{alias}} repo branch -i http://host/path`,
+		Run:     cmdutil.RunFixedArgs(1, func(args []string) (retErr error) {
 			file, err := cmdutil.ParseFile(args[0])
 			if err != nil {
 				return err
@@ -863,10 +833,10 @@ $ pachctl put-file repo branch -i http://host/path`,
 	})...)
 
 	copyFile := &cobra.Command{
-		Use:   "<src-repo>@<src-branch-or-commit>:<src-path> <dst-repo>@<dst-branch-or-commit>:<dst-path>",
+		Use:   "{{alias}} <src-repo>@<src-branch-or-commit>:<src-path> <dst-repo>@<dst-branch-or-commit>:<dst-path>",
 		Short: "Copy files between pfs paths.",
 		Long:  "Copy files between pfs paths.",
-		Run: cmdutil.RunFixedArgs(2, func(args []string) (retErr error) {
+		Run:   cmdutil.RunFixedArgs(2, func(args []string) (retErr error) {
 			srcFile, err := cmdutil.ParseFile(args[0])
 			if err != nil {
 				return err
@@ -895,21 +865,21 @@ $ pachctl put-file repo branch -i http://host/path`,
 
 	var outputPath string
 	getFile := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit>:<path/in/pfs>",
-		Short: "Return the contents of a file.",
-		Long: "Return the contents of a file.",
+		Use:     "{{alias}} <repo>@<branch-or-commit>:<path/in/pfs>",
+		Short:   "Return the contents of a file.",
+		Long:    "Return the contents of a file.",
 		Example: `
 # get file "XXX" on branch "master" in repo "foo"
-$ pachctl get-file foo@master:XXX
+$ pachctl {{alias}} foo@master:XXX
 
 # get file "XXX" in the parent of the current head of branch "master"
 # in repo "foo"
-$ pachctl get-file foo@master^:XXX
+$ pachctl {{alias}} foo@master^:XXX
 
 # get file "XXX" in the grandparent of the current head of branch "master"
 # in repo "foo"
-$ pachctl get-file foo@master^2:XXX`,
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+$ pachctl {{alias}} foo@master^2:XXX`,
+		Run:     cmdutil.RunFixedArgs(1, func(args []string) error {
 			file, err := cmdutil.ParseFile(args[0])
 			if err != nil {
 				return err
@@ -950,10 +920,10 @@ $ pachctl get-file foo@master^2:XXX`,
 	})...)
 
 	inspectFile := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit>:<path/in/pfs>",
+		Use:   "{{alias}} <repo>@<branch-or-commit>:<path/in/pfs>",
 		Short: "Return info about a file.",
 		Long:  "Return info about a file.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			file, err := cmdutil.ParseFile(args[0])
 			if err != nil {
 				return err
@@ -984,30 +954,30 @@ $ pachctl get-file foo@master^2:XXX`,
 
 	var history int64
 	listFile := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit>[:<path/in/pfs>]",
-		Short: "Return the files in a directory.",
-		Long: "Return the files in a directory.",
+		Use:     "{{alias}} <repo>@<branch-or-commit>[:<path/in/pfs>]",
+		Short:   "Return the files in a directory.",
+		Long:    "Return the files in a directory.",
 		Example: `
 # list top-level files on branch "master" in repo "foo"
-$ pachctl list-file foo@master
+$ pachctl {{alias}} foo@master
 
 # list files under directory "dir" on branch "master" in repo "foo"
-$ pachctl list-file foo@master:dir
+$ pachctl {{alias}} foo@master:dir
 
 # list top-level files in the parent commit of the current head of "master"
 # in repo "foo"
-$ pachctl list-file foo@master^
+$ pachctl {{alias}} foo@master^
 
 # list top-level files in the grandparent of the current head of "master"
 # in repo "foo"
-$ pachctl list-file foo@master^2
+$ pachctl {{alias}} foo@master^2
 
 # list the last n versions of top-level files on branch "master" in repo "foo"
-$ pachctl list-file foo@master --history n
+$ pachctl {{alias}} foo@master --history n
 
 # list all versions of top-level files on branch "master" in repo "foo"
-$ pachctl list-file foo@master --history -1`,
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+$ pachctl {{alias}} foo@master --history -1`,
+		Run:     cmdutil.RunFixedArgs(1, func(args []string) error {
 			file, err := cmdutil.ParseFile(args[0])
 			if err != nil {
 				return err
@@ -1041,18 +1011,18 @@ $ pachctl list-file foo@master --history -1`,
 	})...)
 
 	globFile := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit>:<pattern>",
-		Short: "Return files that match a glob pattern in a commit.",
-		Long: "Return files that match a glob pattern in a commit (that is, match a glob pattern in a repo at the state represented by a commit). Glob patterns are documented [here](https://golang.org/pkg/path/filepath/#Match).",
+		Use:     "{{alias}} <repo>@<branch-or-commit>:<pattern>",
+		Short:   "Return files that match a glob pattern in a commit.",
+		Long:    "Return files that match a glob pattern in a commit (that is, match a glob pattern in a repo at the state represented by a commit). Glob patterns are documented [here](https://golang.org/pkg/path/filepath/#Match).",
 		Example: `
 # Return files in repo "foo" on branch "master" that start
 # with the character "A".  Note how the double quotation marks around the 
 # parameter are necessary because otherwise your shell might interpret the "*".
-$ pachctl glob-file "foo@master:A*"
+$ pachctl {{alias}} "foo@master:A*"
 
 # Return files in repo "foo" on branch "master" under directory "data".
-$ pachctl glob-file "foo@master:data/*"`,
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+$ pachctl {{alias}} "foo@master:data/*"`,
+		Run:     cmdutil.RunFixedArgs(1, func(args []string) error {
 			file, err := cmdutil.ParseFile(args[0])
 			if err != nil {
 				return err
@@ -1090,18 +1060,18 @@ $ pachctl glob-file "foo@master:data/*"`,
 
 	var shallow bool
 	diffFile := &cobra.Command{
-		Use:   "<new-repo>@<new-branch-or-commit>:<new-path> [<old-repo>@<old-branch-or-commit>:<old-path>]",
-		Short: "Return a diff of two file trees.",
-		Long:  "Return a diff of two file trees.",
+		Use:     "{{alias}} <new-repo>@<new-branch-or-commit>:<new-path> [<old-repo>@<old-branch-or-commit>:<old-path>]",
+		Short:   "Return a diff of two file trees.",
+		Long:    "Return a diff of two file trees.",
 		Example: `
 # Return the diff of the file "path" of the repo "foo" between the head of the
 # "master" branch and its parent.
-$ pachctl diff-file foo@master:path
+$ pachctl {{alias}} foo@master:path
 
 # Return the diff between the master branches of repos foo and bar at paths
 # path1 and path2, respectively.
-$ pachctl diff-file foo@master:path1 bar@master:path2`,
-		Run: cmdutil.RunBoundedArgs(1, 2, func(args []string) error {
+$ pachctl {{alias}} foo@master:path1 bar@master:path2`,
+		Run:     cmdutil.RunBoundedArgs(1, 2, func(args []string) error {
 			newFile, err := cmdutil.ParseFile(args[0])
 			if err != nil {
 				return err
@@ -1160,10 +1130,10 @@ $ pachctl diff-file foo@master:path1 bar@master:path2`,
 	})...)
 
 	deleteFile := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit>:<path/in/pfs>",
+		Use:   "{{alias}} <repo>@<branch-or-commit>:<path/in/pfs>",
 		Short: "Delete a file.",
 		Long:  "Delete a file.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			file, err := cmdutil.ParseFile(args[0])
 			if err != nil {
 				return err
@@ -1182,10 +1152,10 @@ $ pachctl diff-file foo@master:path1 bar@master:path2`,
 	})...)
 
 	getObject := &cobra.Command{
-		Use:   "<hash>",
+		Use:   "{{alias}} <hash>",
 		Short: "Return the contents of an object",
 		Long:  "Return the contents of an object",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -1200,10 +1170,10 @@ $ pachctl diff-file foo@master:path1 bar@master:path2`,
 	})...)
 
 	getTag := &cobra.Command{
-		Use:   "<tag>",
+		Use:   "{{alias}} <tag>",
 		Short: "Return the contents of a tag",
 		Long:  "Return the contents of a tag",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -1220,10 +1190,10 @@ $ pachctl diff-file foo@master:path1 bar@master:path2`,
 	var debug bool
 	var commits cmdutil.RepeatedStringArg
 	mount := &cobra.Command{
-		Use:   "<path/to/mount/point>",
+		Use:   "{{alias}} <path/to/mount/point>",
 		Short: "Mount pfs locally. This command blocks.",
 		Long:  "Mount pfs locally. This command blocks.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "fuse")
 			if err != nil {
 				return err
@@ -1249,10 +1219,10 @@ $ pachctl diff-file foo@master:path1 bar@master:path2`,
 	commands = append(commands, cmdutil.CreateAliases(mount, []string{"mount"})...)
 
 	unmount := &cobra.Command{
-		Use:   "<path/to/mount/point>",
+		Use:   "{{alias}} <path/to/mount/point>",
 		Short: "Unmount pfs.",
 		Long:  "Unmount pfs.",
-		Run: cmdutil.RunBoundedArgs(0, 1, func(args []string) error {
+		Run:   cmdutil.RunBoundedArgs(0, 1, func(args []string) error {
 			if len(args) == 1 {
 				return syscall.Unmount(args[0], 0)
 			}

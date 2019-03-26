@@ -52,7 +52,7 @@ func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
 
 	job := &cobra.Command{
 		Short: "Docs for jobs.",
-		Long: `Jobs are the basic unit of computation in Pachyderm.
+		Long:  `Jobs are the basic unit of computation in Pachyderm.
 
 Jobs run a containerized workload over a set of finished input commits.
 Creating a job will also create a new repo and a commit in that repo which
@@ -71,10 +71,10 @@ To increase the throughput of a job, increase the 'shard' parameter.
 
 	var block bool
 	inspectJob := &cobra.Command{
-		Use:   "<job>",
+		Use:   "{{alias}} <job>",
 		Short: "Return info about a job.",
 		Long:  "Return info about a job.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -112,17 +112,17 @@ To increase the throughput of a job, increase the 'shard' parameter.
 		Short: "Return info about jobs.",
 		Long: "Return info about jobs.",
 		Example: `
-# return all jobs
-$ pachctl list-job
+# Return all jobs
+$ pachctl {{alias}}
 
-# return all jobs in pipeline foo
-$ pachctl list-job -p foo
+# Return all jobs in pipeline foo
+$ pachctl {{alias}} -p foo
 
-# return all jobs whose input commits include foo@XXX and bar@YYY
-$ pachctl list-job -i foo@XXX -i bar@YYY
+# Return all jobs whose input commits include foo@XXX and bar@YYY
+$ pachctl {{alias}} -i foo@XXX -i bar@YYY
 
-# return all jobs in pipeline foo and whose input commits include bar@YYY
-$ pachctl list-job -p foo -i bar@YYY`,
+# Return all jobs in pipeline foo and whose input commits include bar@YYY
+$ pachctl {{alias}} -p foo -i bar@YYY`,
 		Run: cmdutil.RunFixedArgs(0, func(args []string) error {
 			commits, err := cmdutil.ParseCommits(inputCommitStrs)
 			if err != nil {
@@ -176,16 +176,16 @@ $ pachctl list-job -p foo -i bar@YYY`,
 
 	var pipelines cmdutil.RepeatedStringArg
 	flushJob := &cobra.Command{
-		Use:   "<repo>@<branch-or-commit> ...",
-		Short: "Wait for all jobs caused by the specified commits to finish and return them.",
-		Long: "Wait for all jobs caused by the specified commits to finish and return them.",
+		Use:     "{{alias}} <repo>@<branch-or-commit> ...",
+		Short:   "Wait for all jobs caused by the specified commits to finish and return them.",
+		Long:    "Wait for all jobs caused by the specified commits to finish and return them.",
 		Example: `
-# return jobs caused by foo@XXX and bar@YYY
-$ pachctl flush-job foo@XXX bar@YYY
+# Return jobs caused by foo@XXX and bar@YYY.
+$ pachctl {{alias}} foo@XXX bar@YYY
 
-# return jobs caused by foo@XXX leading to pipelines bar and baz
-$ pachctl flush-job foo@XXX -p bar -p baz`,
-		Run: cmdutil.Run(func(args []string) error {
+# Return jobs caused by foo@XXX leading to pipelines bar and baz.
+$ pachctl {{alias}} foo@XXX -p bar -p baz`,
+		Run:     cmdutil.Run(func(args []string) error {
 			commits, err := cmdutil.ParseCommits(args)
 			if err != nil {
 				return err
@@ -228,10 +228,10 @@ $ pachctl flush-job foo@XXX -p bar -p baz`,
 	})...)
 
 	deleteJob := &cobra.Command{
-		Use:   "<job>",
+		Use:   "{{alias}} <job>",
 		Short: "Delete a job.",
 		Long:  "Delete a job.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -249,10 +249,10 @@ $ pachctl flush-job foo@XXX -p bar -p baz`,
 	})...)
 
 	stopJob := &cobra.Command{
-		Use:   "<job>",
+		Use:   "{{alias}} <job>",
 		Short: "Stop a job.",
 		Long:  "Stop a job.  The job will be stopped immediately.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -270,10 +270,10 @@ $ pachctl flush-job foo@XXX -p bar -p baz`,
 	})...)
 
 	restartDatum := &cobra.Command{
-		Use:   "<job> <datum-path1>,<datum-path2>,...",
+		Use:   "{{alias}} <job> <datum-path1>,<datum-path2>,...",
 		Short: "Restart a datum.",
 		Long:  "Restart a datum.",
-		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(2, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -301,10 +301,10 @@ $ pachctl flush-job foo@XXX -p bar -p baz`,
 	var pageSize int64
 	var page int64
 	listDatum := &cobra.Command{
-		Use:   "<job>",
+		Use:   "{{alias}} <job>",
 		Short: "Return the datums in a job.",
 		Long:  "Return the datums in a job.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -340,10 +340,10 @@ $ pachctl flush-job foo@XXX -p bar -p baz`,
 	})...)
 
 	inspectDatum := &cobra.Command{
-		Use:   "<job> <datum>",
+		Use:   "{{alias}} <job> <datum>",
 		Short: "Display detailed info about a single datum.",
 		Long:  "Display detailed info about a single datum. Requires the pipeline to have stats enabled.",
-		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(2, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -375,19 +375,19 @@ $ pachctl flush-job foo@XXX -p bar -p baz`,
 		tail        int64
 	)
 	getLogs := &cobra.Command{
-		Use:   "[--pipeline=<pipeline>|--job=<job>] [--datum=<datum>]",
-		Short: "Return logs from a job.",
-		Long: "Return logs from a job.",
+		Use:     "{{alias}} [--pipeline=<pipeline>|--job=<job>] [--datum=<datum>]",
+		Short:   "Return logs from a job.",
+		Long:    "Return logs from a job.",
 		Example: `
-# return logs emitted by recent jobs in the "filter" pipeline
-$ pachctl get-logs --pipeline=filter
+# Return logs emitted by recent jobs in the "filter" pipeline
+$ pachctl {{alias}} --pipeline=filter
 
-# return logs emitted by the job aedfa12aedf
-$ pachctl get-logs --job=aedfa12aedf
+# Return logs emitted by the job aedfa12aedf
+$ pachctl {{alias}} --job=aedfa12aedf
 
-# return logs emitted by the pipeline \"filter\" while processing /apple.txt and a file with the hash 123aef
-$ pachctl get-logs --pipeline=filter --inputs=/apple.txt,123aef`,
-		Run: cmdutil.RunFixedArgs(0, func(args []string) error {
+# Return logs emitted by the pipeline \"filter\" while processing /apple.txt and a file with the hash 123aef
+$ pachctl {{alias}} --pipeline=filter --inputs=/apple.txt,123aef`,
+		Run:     cmdutil.RunFixedArgs(0, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return fmt.Errorf("error connecting to pachd: %v", err)
@@ -503,10 +503,10 @@ All jobs created by a pipeline will create commits in the pipeline's repo.
 	})...)
 
 	inspectPipeline := &cobra.Command{
-		Use:   "<pipeline>",
+		Use:   "{{alias}} <pipeline>",
 		Short: "Return info about a pipeline.",
 		Long:  "Return info about a pipeline.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -537,10 +537,10 @@ All jobs created by a pipeline will create commits in the pipeline's repo.
 	})...)
 
 	extractPipeline := &cobra.Command{
-		Use:   "<pipeline>",
+		Use:   "{{alias}} <pipeline>",
 		Short: "Return the manifest used to create a pipeline.",
 		Long:  "Return the manifest used to create a pipeline.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -560,10 +560,10 @@ All jobs created by a pipeline will create commits in the pipeline's repo.
 
 	var editor string
 	editPipeline := &cobra.Command{
-		Use:   "<pipeline>",
+		Use:   "{{alias}} <pipeline>",
 		Short: "Edit the manifest for a pipeline in your text editor.",
 		Long:  "Edit the manifest for a pipeline in your text editor.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) (retErr error) {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) (retErr error) {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -679,10 +679,10 @@ All jobs created by a pipeline will create commits in the pipeline's repo.
 	var all bool
 	var force bool
 	deletePipeline := &cobra.Command{
-		Use:   "(<pipeline>|--all)",
+		Use:   "{{alias}} (<pipeline>|--all)",
 		Short: "Delete a pipeline.",
 		Long:  "Delete a pipeline.",
-		Run: cmdutil.RunBoundedArgs(0, 1, func(args []string) error {
+		Run:   cmdutil.RunBoundedArgs(0, 1, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -718,10 +718,10 @@ All jobs created by a pipeline will create commits in the pipeline's repo.
 	})...)
 
 	startPipeline := &cobra.Command{
-		Use:   "<pipeline>",
+		Use:   "{{alias}} <pipeline>",
 		Short: "Restart a stopped pipeline.",
 		Long:  "Restart a stopped pipeline.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -739,10 +739,10 @@ All jobs created by a pipeline will create commits in the pipeline's repo.
 	})...)
 
 	stopPipeline := &cobra.Command{
-		Use:   "<pipeline>",
+		Use:   "{{alias}} <pipeline>",
 		Short: "Stop a running pipeline.",
 		Long:  "Stop a running pipeline.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err

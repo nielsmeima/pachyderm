@@ -25,11 +25,7 @@ func recursiveBlockQuoteExamples(parent *cobra.Command) {
 }
 
 func do(appEnvObj interface{}) error {
-	rootCmd, err := cmd.PachctlCmd()
-	if err != nil {
-		return err
-	}
-
+	rootCmd := cmd.PachctlCmd()
 	recursiveBlockQuoteExamples(rootCmd)
 	return doc.GenMarkdownTree(rootCmd, "./doc/pachctl/")
 }

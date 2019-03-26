@@ -248,7 +248,7 @@ __custom_func() {
 
 // PachctlCmd creates a cobra.Command which can deploy pachyderm clusters and
 // interact with them (it implements the pachctl binary).
-func PachctlCmd() (*cobra.Command, error) {
+func PachctlCmd() *cobra.Command {
 	var verbose bool
 	var noMetrics bool
 	var noPortForwarding bool
@@ -297,7 +297,6 @@ Environment variables:
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Output verbose logs")
 	rootCmd.PersistentFlags().BoolVarP(&noMetrics, "no-metrics", "", false, "Don't report user metrics for this command")
 	rootCmd.PersistentFlags().BoolVarP(&noPortForwarding, "no-port-forwarding", "", false, "Disable implicit port forwarding")
-
 
 	var subcommands []*cobra.Command
 
@@ -567,7 +566,44 @@ This resets the cluster to its initial state.`,
 	subcommands = append(subcommands, debugcmds.Cmds(&noMetrics, &noPortForwarding)...)
 
 	cmdutil.MergeCommands(rootCmd, subcommands)
-	return rootCmd, nil
+
+	originalUsageFunc := rootCmd.UsageFunc()
+	rootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
+		if cmd != rootCmd {
+			return originalUsageFunc(cmd)
+		}
+
+		return originalUsageFunc(cmd)
+	})
+	/*
+	`Usage:{{if .Runnable}}
+  {{if .HasAvailableFlags}}{{appendIfNotPresent .UseLine "[flags]"}}{{else}}{{.UseLine}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+  {{ .CommandPath}} [command]{{end}}{{if gt .Aliases 0}}
+
+Aliases:
+  {{.NameAndAliases}}
+{{end}}{{if .HasExample}}
+
+Examples:
+{{ .Example }}{{end}}{{ if .HasAvailableSubCommands}}
+
+Available Commands:{{range .Commands}}{{if .IsAvailableCommand}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{ if .HasAvailableLocalFlags}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimRightSpace}}{{end}}{{ if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimRightSpace}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsHelpCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{ if .HasAvailableSubCommands }}
+
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`
+	*/
+
+	return rootCmd
 }
 
 func printVersionHeader(w io.Writer) {

@@ -182,52 +182,6 @@ func (r *RepeatedStringArg) Type() string {
 	return "[]string"
 }
 
-// SetDocsUsage sets the usage string for a docs-style command.  Docs commands
-// have no functionality except to output some docs and related commands, and
-// should not specify a 'Run' attribute.
-func SetDocsUsage(command *cobra.Command, subcommands []*cobra.Command) {
-    command.SetUsageTemplate(`Usage:
-  pachctl [command]{{if gt .Aliases 0}}
-
-Aliases:
-  {{.NameAndAliases}}
-{{end}}{{if .HasExample}}
-
-Examples:
-{{ .Example }}{{end}}{{ if .HasAvailableSubCommands}}
-
-Available Commands:{{range .Commands}}{{if .IsAvailableCommand}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{ if .HasAvailableLocalFlags}}
-
-Flags:
-{{.LocalFlags.FlagUsages | trimRightSpace}}{{end}}{{if .HasHelpSubCommands}}
-
-Additional help topics:{{range .Commands}}{{if .IsHelpCommand}}
-  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}
-`)
-
-    command.SetHelpTemplate(`{{or .Long .Short}}
-{{.UsageString}}`)
-
-    // This song-and-dance is so that we can render the related commands without
-    // actually having them usable as subcommands of the docs command.
-    // That is, we don't want `pachctl job list-job` to work, it should just
-    // be `pachctl list-job`.  Therefore, we lazily add/remove the subcommands
-    // only when we try to render usage for the docs command.
-    originalUsage := command.UsageFunc()
-    command.SetUsageFunc(func (c *cobra.Command) error {
-        newUsage := command.UsageFunc()
-        command.SetUsageFunc(originalUsage)
-        defer command.SetUsageFunc(newUsage)
-
-        command.AddCommand(subcommands...)
-        defer command.RemoveCommand(subcommands...)
-
-        command.Usage()
-        return nil
-    })
-}
-
 // Generates one or many nested command trees for each invocation listed in
 // 'invocations', which should be space-delimited as on the command-line.  The
 // 'Use' field of 'cmd' should not include the name of the command as that will
@@ -251,8 +205,9 @@ func CreateAliases(cmd *cobra.Command, invocations []string) []*cobra.Command {
 				if cmd.Use == "" {
 					cur.Use = arg
 				} else {
-					cur.Use = fmt.Sprintf("%s %s", arg, cmd.Use)
+					cur.Use = strings.Replace(cmd.Use, "{{alias}}", arg, -1)
 				}
+				cur.Example = strings.Replace(cmd.Example, "{{alias}}", invocation, -1)
 			} else {
 				cur.Use = arg
 			}
