@@ -19,10 +19,9 @@ func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
 	var commands []*cobra.Command
 
 	dump := &cobra.Command{
-		Use:   "dump",
 		Short: "Return a dump of running goroutines.",
 		Long:  "Return a dump of running goroutines.",
-		Run: cmdutil.RunFixedArgs(0, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(0, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "debug-dump")
 			if err != nil {
 				return err
@@ -31,14 +30,14 @@ func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
 			return client.Dump(os.Stdout)
 		}),
 	}
-	commands = append(commands, dump)
+	commands = append(commands, cmdutil.CreateAliases(dump, []string{"debug dump"})...)
 
 	var duration time.Duration
 	profile := &cobra.Command{
-		Use:   "profile <profile>",
+		Use:   "{{alias}} <profile>",
 		Short: "Return a profile from the server.",
 		Long:  "Return a profile from the server.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "debug-dump")
 			if err != nil {
 				return err
@@ -48,13 +47,12 @@ func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
 		}),
 	}
 	profile.Flags().DurationVarP(&duration, "duration", "d", time.Minute, "Duration to run a CPU profile for.")
-	commands = append(commands, profile)
+	commands = append(commands, cmdutil.CreateAliases(profile, []string{"debug profile"})...)
 
 	binary := &cobra.Command{
-		Use:   "binary",
 		Short: "Return the binary the server is running.",
 		Long:  "Return the binary the server is running.",
-		Run: cmdutil.RunFixedArgs(0, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(0, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "debug-dump")
 			if err != nil {
 				return err
@@ -63,15 +61,15 @@ func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
 			return client.Binary(os.Stdout)
 		}),
 	}
-	commands = append(commands, binary)
+	commands = append(commands, cmdutil.CreateAliases(binary, []string{"debug binary"})...)
 
 	var profileFile string
 	var binaryFile string
 	pprof := &cobra.Command{
-		Use:   "pprof <profile>",
+		Use:   "{{alias}} <profile>",
 		Short: "Analyze a profile of pachd in pprof.",
 		Long:  "Analyze a profile of pachd in pprof.",
-		Run: cmdutil.RunFixedArgs(1, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "debug-dump")
 			if err != nil {
 				return err
@@ -120,17 +118,13 @@ func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
 	pprof.Flags().StringVar(&profileFile, "profile-file", "profile", "File to write the profile to.")
 	pprof.Flags().StringVar(&binaryFile, "binary-file", "binary", "File to write the binary to.")
 	pprof.Flags().DurationVarP(&duration, "duration", "d", time.Minute, "Duration to run a CPU profile for.")
-	commands = append(commands, pprof)
+	commands = append(commands, cmdutil.CreateAliases(pprof, []string{"debug pprof"})...)
 
 	debug := &cobra.Command{
-		Use:   "debug",
 		Short: "Debug commands for analyzing a running cluster.",
 		Long:  "Debug commands for analyzing a running cluster.",
 	}
+	commands = append(commands, cmdutil.CreateAliases(debug, []string{"debug"})...)
 
-	for _, cmd := range commands {
-		debug.AddCommand(cmd)
-	}
-
-	return []*cobra.Command{debug}
+	return commands
 }

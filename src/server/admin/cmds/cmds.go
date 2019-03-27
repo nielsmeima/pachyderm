@@ -18,16 +18,15 @@ func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
 	var noObjects bool
 	var url string
 	extract := &cobra.Command{
-		Use:   "extract",
-		Short: "Extract Pachyderm state to stdout or an object store bucket.",
-		Long: "Extract Pachyderm state to stdout or an object store bucket.",
+		Short:   "Extract Pachyderm state to stdout or an object store bucket.",
+		Long:    "Extract Pachyderm state to stdout or an object store bucket.",
 		Example: `
 # Extract into a local file:
-pachctl extract > backup
+pachctl {{alias}} > backup
 
 # Extract to s3:
-pachctl extract -u s3://bucket/backup`,
-		Run: cmdutil.RunFixedArgs(0, func(args []string) (retErr error) {
+pachctl {{alias}} -u s3://bucket/backup`,
+		Run:     cmdutil.RunFixedArgs(0, func(args []string) (retErr error) {
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -47,19 +46,18 @@ pachctl extract -u s3://bucket/backup`,
 	}
 	extract.Flags().BoolVar(&noObjects, "no-objects", false, "don't extract from object storage, only extract data from etcd")
 	extract.Flags().StringVarP(&url, "url", "u", "", "An object storage url (i.e. s3://...) to extract to.")
-	commands = append(commands, extract)
+	commands = append(commands, cmdutil.CreateAliases(extract, []string{"extract"})...)
 
 	restore := &cobra.Command{
-		Use:   "restore",
-		Short: "Restore Pachyderm state from stdin or an object store.",
-		Long: "Restore Pachyderm state from stdin or an object store.",
+		Short:   "Restore Pachyderm state from stdin or an object store.",
+		Long:    "Restore Pachyderm state from stdin or an object store.",
 		Example: `
 # Restore from a local file:
-pachctl restore < backup
+pachctl {{alias}} < backup
 
 # Restore from s3:
-pachctl restore -u s3://bucket/backup`,
-		Run: cmdutil.RunFixedArgs(0, func(args []string) error {
+pachctl {{alias}} -u s3://bucket/backup`,
+		Run:     cmdutil.RunFixedArgs(0, func(args []string) error {
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -79,12 +77,12 @@ pachctl restore -u s3://bucket/backup`,
 		}),
 	}
 	restore.Flags().StringVarP(&url, "url", "u", "", "An object storage url (i.e. s3://...) to restore from.")
-	commands = append(commands, restore)
+	commands = append(commands, cmdutil.CreateAliases(restore, []string{"restore"})...)
 
 	inspectCluster := &cobra.Command{
 		Short: "Returns info about the pachyderm cluster",
 		Long:  "Returns info about the pachyderm cluster",
-		Run: cmdutil.RunFixedArgs(0, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(0, func(args []string) error {
 			c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err

@@ -231,6 +231,7 @@ func CreateAliases(cmd *cobra.Command, invocations []string) []*cobra.Command {
 // 'CreateAliases' generates empty commands to preserve
 func MergeCommands(root *cobra.Command, children []*cobra.Command) {
 	// Move over any commands without subcommands, save the rest into a new slice
+	// TODO: do this iteratively, going deeper into the command tree until no commands remain
 	var nested []*cobra.Command
 	for _, cmd := range children {
     if cmd.HasSubCommands() {

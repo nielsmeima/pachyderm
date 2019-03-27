@@ -260,7 +260,7 @@ func PachctlCmd() *cobra.Command {
 	marshaller := &jsonpb.Marshaler{Indent: "  "}
 
 	rootCmd := &cobra.Command{
-		Use: os.Args[0],
+		Use:  os.Args[0],
 		Long: `Access the Pachyderm API.
 
 Environment variables:
@@ -303,10 +303,9 @@ Environment variables:
 	var clientOnly bool
 	var timeoutFlag string
 	versionCmd := &cobra.Command{
-		Use:   "version",
 		Short: "Return version information.",
 		Long:  "Return version information.",
-		Run: cmdutil.RunFixedArgs(0, func(args []string) (retErr error) {
+		Run:   cmdutil.RunFixedArgs(0, func(args []string) (retErr error) {
 			if clientOnly {
 				if raw {
 					if err := marshaller.Marshal(os.Stdout, version.Version); err != nil {
@@ -393,13 +392,13 @@ Environment variables:
 		"--client-only is set, this flag is ignored. If unset, pachctl will use a "+
 		"default timeout; if set to 0s, the call will never time out.")
 	versionCmd.Flags().AddFlagSet(rawFlags)
-	subcommands = append(subcommands, versionCmd)
+	subcommands = append(subcommands, cmdutil.CreateAliases(versionCmd, []string{"version"})...)
 
 	deleteAll := &cobra.Command{
 		Short: "Delete everything.",
-		Long: `Delete all repos, commits, files, pipelines and jobs.
+		Long:  `Delete all repos, commits, files, pipelines and jobs.
 This resets the cluster to its initial state.`,
-		Run: cmdutil.RunFixedArgs(0, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(0, func(args []string) error {
 			client, err := client.NewOnUserMachine(!noMetrics, !noPortForwarding, "user")
 			if err != nil {
 				return err
@@ -450,10 +449,9 @@ This resets the cluster to its initial state.`,
 	var pfsPort uint16
 	var namespace string
 	portForward := &cobra.Command{
-		Use:   "port-forward",
 		Short: "Forward a port on the local machine to pachd. This command blocks.",
 		Long:  "Forward a port on the local machine to pachd. This command blocks.",
-		Run: cmdutil.RunFixedArgs(0, func(args []string) error {
+		Run:   cmdutil.RunFixedArgs(0, func(args []string) error {
 			fw, err := client.NewPortForwarder(namespace)
 			if err != nil {
 				return err
@@ -516,15 +514,14 @@ This resets the cluster to its initial state.`,
 	portForward.Flags().Uint16VarP(&uiWebsocketPort, "proxy-port", "x", 30081, "The local port to bind Pachyderm's dash proxy service to.")
 	portForward.Flags().Uint16VarP(&pfsPort, "pfs-port", "f", 30652, "The local port to bind PFS over HTTP to.")
 	portForward.Flags().StringVar(&namespace, "namespace", "default", "Kubernetes namespace Pachyderm is deployed in.")
-	subcommands = append(subcommands, portForward)
+	subcommands = append(subcommands, cmdutil.CreateAliases(portForward, []string{"port-forward"})...)
 
 	var install bool
 	var path string
 	completion := &cobra.Command{
-		Use:   "completion",
 		Short: "Print or install the bash completion code.",
 		Long:  "Print or install the bash completion code. This should be placed as the file `pachctl` in the bash completion directory (by default this is `/etc/bash_completion.d`. If bash-completion was installed via homebrew, this would be `$(brew --prefix)/etc/bash_completion.d`.)",
-		Run: cmdutil.RunFixedArgs(0, func(args []string) (retErr error) {
+		Run:   cmdutil.RunFixedArgs(0, func(args []string) (retErr error) {
 			var dest io.Writer
 
 			if install {
@@ -555,7 +552,7 @@ This resets the cluster to its initial state.`,
 	}
 	completion.Flags().BoolVar(&install, "install", false, "Install the completion.")
 	completion.Flags().StringVar(&path, "path", "/etc/bash_completion.d/pachctl", "Path to install the completion to. This will default to `/etc/bash_completion.d/` if unspecified.")
-	subcommands = append(subcommands, completion)
+	subcommands = append(subcommands, cmdutil.CreateAliases(completion, []string{"completion"})...)
 
 	subcommands = append(subcommands, pfscmds.Cmds(&noMetrics, &noPortForwarding)...)
 	subcommands = append(subcommands, ppscmds.Cmds(&noMetrics, &noPortForwarding)...)

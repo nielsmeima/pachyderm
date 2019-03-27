@@ -55,8 +55,16 @@ func TestCommandAliases(t *testing.T) {
 
 	var walk func(*cobra.Command)
 	walk = func(cmd *cobra.Command) {
+		require.True(
+			t, cmd.Run != nil || len(cmd.Commands()) > 0,
+			"Command is not runnable and has no child commands: %s (%s)",
+			strings.Join(path, " "), cmd.Short,
+		)
+
 		for _, subcmd := range cmd.Commands() {
 			path = append(path, subcmd.Name())
+			// defer func() {path = path[:len(path) - 1]}()
+
 			require.True(
 				t, subcmd.Short != "",
 				"Command must provide a 'Short' description string: %s",
@@ -72,6 +80,7 @@ func TestCommandAliases(t *testing.T) {
 				"Command must provide a 'Use' string: %s (%s)",
 				strings.Join(path, " "), subcmd.Short,
 			)
+
 			walk(subcmd)
 			path = path[:len(path) - 1]
 		}
