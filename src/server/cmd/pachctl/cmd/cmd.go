@@ -600,6 +600,8 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 `
 	*/
 
+	apply_v1_8_command_compat(rootCmd)
+
 	return rootCmd
 }
 

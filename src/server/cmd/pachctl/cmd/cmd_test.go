@@ -63,7 +63,6 @@ func TestCommandAliases(t *testing.T) {
 
 		for _, subcmd := range cmd.Commands() {
 			path = append(path, subcmd.Name())
-			// defer func() {path = path[:len(path) - 1]}()
 
 			require.True(
 				t, subcmd.Short != "",
@@ -87,4 +86,6 @@ func TestCommandAliases(t *testing.T) {
 	}
 
 	walk(pachctlCmd)
+
+	// TODO: assert that every command name is unique in its level
 }
