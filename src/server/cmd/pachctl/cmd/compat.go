@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/jsonpb"
-	ppspretty "github.com/pachyderm/pachyderm/src/server/pps/pretty"
-	"github.com/pachyderm/pachyderm/src/server/pkg/tabwriter"
-	"github.com/pachyderm/pachyderm/src/server/pkg/cmdutil"
 	"github.com/pachyderm/pachyderm/src/client"
 	"github.com/pachyderm/pachyderm/src/client/pfs"
 	"github.com/pachyderm/pachyderm/src/client/pps"
+	"github.com/pachyderm/pachyderm/src/server/pkg/cmdutil"
+	"github.com/pachyderm/pachyderm/src/server/pkg/tabwriter"
+	ppspretty "github.com/pachyderm/pachyderm/src/server/pps/pretty"
 
 	"github.com/spf13/cobra"
 )
@@ -535,6 +535,23 @@ $ pachctl list-job -p foo bar/YYY`,
 	// Apply the 'Hidden' attribute to all these commands so they don't pollute help
 	for _, cmd := range commands {
 		cmd.Hidden = true
+
+		// Dear god
+		oldPreRun := cmd.PreRun
+		oldPreRunE := cmd.PreRunE
+		cmd.PreRun = nil
+		cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+			oldPath := cmd.CommandPath()
+			newPath := strings.Replace(oldPath, "-", " ", -1)
+			fmt.Fprintf(os.Stderr, "WARNING: '%s' is deprecated and will be removed in a future release, use '%s' instead.\n", oldPath, newPath)
+			if oldPreRunE != nil {
+				return oldPreRunE(cmd, args)
+			}
+			if oldPreRun != nil {
+				oldPreRun(cmd, args)
+			}
+			return nil
+		}
 	}
 
 	rootCmd.AddCommand(commands...)
