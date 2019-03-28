@@ -4,13 +4,16 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"html/template"
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/pachyderm/pachyderm/src/client"
 	"github.com/pachyderm/pachyderm/src/client/pfs"
 	"github.com/pachyderm/pachyderm/src/client/pps"
 	"github.com/pachyderm/pachyderm/src/server/pkg/cmdutil"
+	"github.com/pachyderm/pachyderm/src/server/pkg/pretty"
 	"github.com/pachyderm/pachyderm/src/server/pkg/tabwriter"
+	pfspretty "github.com/pachyderm/pachyderm/src/server/pfs/pretty"
 	ppspretty "github.com/pachyderm/pachyderm/src/server/pps/pretty"
 
 	"github.com/spf13/cobra"
@@ -525,7 +528,12 @@ $ pachctl list-job -p foo bar/YYY`,
 	oldListJob.Flags().BoolVar(&raw, "raw", false, "disable pretty printing, print raw json")
 	commands = append(commands, oldListJob)
 
-	oldPrintDetailedCommitInfo := func (commitInfo *PrintableCommitInfo) error {
+	oldPrintDetailedCommitInfo := func (commitInfo *pfspretty.PrintableCommitInfo) error {
+		var funcMap = template.FuncMap{
+			"prettyAgo":  pretty.Ago,
+			"prettySize": pretty.Size,
+		}
+
 	 template, err := template.New("CommitInfo").Funcs(funcMap).Parse(
 		 `Commit: {{.Commit.Repo.Name}}/{{.Commit.ID}}{{if .Description}}
 Description: {{.Description}}{{end}}{{if .ParentCommit}}
@@ -571,7 +579,7 @@ Provenance: {{range .Provenance}} {{.Repo.Name}}/{{.ID}}{{end}}{{end}}
 				marshaller := &jsonpb.Marshaler{Indent: "  "}
 				return marshaller.Marshal(os.Stdout, commitInfo)
 			}
-			ci := &pretty.PrintableCommitInfo{
+			ci := &pfspretty.PrintableCommitInfo{
 				CommitInfo:     commitInfo,
 				FullTimestamps: fullTimestamps,
 			}

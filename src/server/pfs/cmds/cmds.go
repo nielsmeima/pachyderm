@@ -51,14 +51,14 @@ func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
 
 	marshaller := &jsonpb.Marshaler{Indent: "  "}
 
-	repo := &cobra.Command{
+	repoDocs := &cobra.Command{
 		Short: "Docs for repos.",
 		Long: `Repos, short for repository, are the top level data object in Pachyderm.
 
 Repos are created with create-repo.
 `,
 	}
-	commands = append(commands, cmdutil.CreateAliases(repo, []string{"repo"})...)
+	commands = append(commands, cmdutil.CreateAliases(repoDocs, []string{"repo"})...)
 
 	var description string
 	createRepo := &cobra.Command{
@@ -228,7 +228,7 @@ Repos are created with create-repo.
 		"repo delete",
 	})...)
 
-	commit := &cobra.Command{
+	commitDocs := &cobra.Command{
 		Short: "Docs for commits.",
 		Long: `Commits are atomic transactions on the content of a repo.
 
@@ -244,7 +244,7 @@ Commits can be created with another commit as a parent.
 This layers the data in the commit over the data in the parent.
 `,
 	}
-	commands = append(commands, cmdutil.CreateAliases(commit, []string{"commit"})...)
+	commands = append(commands, cmdutil.CreateAliases(commitDocs, []string{"commit"})...)
 
 	var parent string
 	startCommit := &cobra.Command{
@@ -569,6 +569,12 @@ $ pachctl {{alias}} test@master --new`,
 		"commit delete",
 	})...)
 
+	branchDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	commands = append(commands, cmdutil.CreateAliases(branchDocs, []string{"branch"})...)
+
 	var branchProvenance cmdutil.RepeatedStringArg
 	var head string
 	createBranch := &cobra.Command{
@@ -659,7 +665,7 @@ $ pachctl {{alias}} test@master --new`,
 		"branch delete",
 	})...)
 
-	file := &cobra.Command{
+	fileDocs := &cobra.Command{
 		Short: "Docs for files.",
 		Long: `Files are the lowest level data object in Pachyderm.
 
@@ -667,7 +673,7 @@ Files can be written to started (but not finished) commits with put-file.
 Files can be read from finished commits with get-file.
 `,
 	}
-	commands = append(commands, cmdutil.CreateAliases(file, []string{"file"})...)
+	commands = append(commands, cmdutil.CreateAliases(fileDocs, []string{"file"})...)
 
 	var filePaths []string
 	var recursive bool
@@ -1151,6 +1157,12 @@ $ pachctl {{alias}} foo@master:path1 bar@master:path2`,
 		"file delete",
 	})...)
 
+	objectDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	commands = append(commands, cmdutil.CreateAliases(objectDocs, []string{"tag"})...)
+
 	getObject := &cobra.Command{
 		Use:   "{{alias}} <hash>",
 		Short: "Return the contents of an object",
@@ -1168,6 +1180,12 @@ $ pachctl {{alias}} foo@master:path1 bar@master:path2`,
 		"get object",
 		"object get",
 	})...)
+
+	tagDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	commands = append(commands, cmdutil.CreateAliases(tagDocs, []string{"tag"})...)
 
 	getTag := &cobra.Command{
 		Use:   "{{alias}} <tag>",

@@ -554,6 +554,109 @@ This resets the cluster to its initial state.`,
 	completion.Flags().StringVar(&path, "path", "/etc/bash_completion.d/pachctl", "Path to install the completion to. This will default to `/etc/bash_completion.d/` if unspecified.")
 	subcommands = append(subcommands, cmdutil.CreateAliases(completion, []string{"completion"})...)
 
+	// Logical commands for grouping commands by verb (no run functions)
+	deleteDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(deleteDocs, []string{"delete"})...)
+
+	createDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(createDocs, []string{"create"})...)
+
+	updateDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(updateDocs, []string{"update"})...)
+
+	inspectDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(inspectDocs, []string{"inspect"})...)
+
+	listDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(listDocs, []string{"list"})...)
+
+	startDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(startDocs, []string{"start"})...)
+
+	finishDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(finishDocs, []string{"finish"})...)
+
+	flushDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(flushDocs, []string{"flush"})...)
+
+	subscribeDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(subscribeDocs, []string{"subscribe"})...)
+
+	putDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(putDocs, []string{"put"})...)
+
+	copyDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(copyDocs, []string{"copy"})...)
+
+	getDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(getDocs, []string{"get"})...)
+
+	globDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(globDocs, []string{"glob"})...)
+
+	diffDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(diffDocs, []string{"diff"})...)
+
+	stopDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(stopDocs, []string{"stop"})...)
+
+	restartDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(restartDocs, []string{"restart"})...)
+
+	editDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	subcommands = append(subcommands, cmdutil.CreateAliases(editDocs, []string{"edit"})...)
+
 	subcommands = append(subcommands, pfscmds.Cmds(&noMetrics, &noPortForwarding)...)
 	subcommands = append(subcommands, ppscmds.Cmds(&noMetrics, &noPortForwarding)...)
 	subcommands = append(subcommands, deploycmds.Cmds(&noMetrics, &noPortForwarding)...)

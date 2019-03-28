@@ -50,7 +50,7 @@ func Cmds(noMetrics *bool, noPortForwarding *bool) []*cobra.Command {
 		OrigName: true,
 	}
 
-	job := &cobra.Command{
+	jobDocs := &cobra.Command{
 		Short: "Docs for jobs.",
 		Long:  `Jobs are the basic unit of computation in Pachyderm.
 
@@ -64,8 +64,7 @@ If the job fails, the commit it creates will not be finished.
 To increase the throughput of a job, increase the 'shard' parameter.
 `,
 	}
-	commands = append(commands, cmdutil.CreateAliases(job, []string{"job"})...)
-
+	commands = append(commands, cmdutil.CreateAliases(jobDocs, []string{"job"})...)
 
 	pipelineSpec := "[Pipeline Specification](../reference/pipeline_spec.html)"
 
@@ -269,6 +268,12 @@ $ pachctl {{alias}} foo@XXX -p bar -p baz`,
 		"job stop",
 	})...)
 
+	datumDocs := &cobra.Command{
+		Short: "",
+		Long:  "",
+	}
+	commands = append(commands, cmdutil.CreateAliases(datumDocs, []string{"datum"})...)
+
 	restartDatum := &cobra.Command{
 		Use:   "{{alias}} <job> <datum-path1>,<datum-path2>,...",
 		Short: "Restart a datum.",
@@ -448,7 +453,7 @@ $ pachctl {{alias}} --pipeline=filter --inputs=/apple.txt,123aef`,
 		"logs",
 	})...)
 
-	pipeline := &cobra.Command{
+	pipelineDocs := &cobra.Command{
 		Short: "Docs for pipelines.",
 		Long: `Pipelines are a powerful abstraction for automating jobs.
 
@@ -459,7 +464,7 @@ Creating a pipeline will also create a repo of the same name.
 All jobs created by a pipeline will create commits in the pipeline's repo.
 `,
 	}
-	commands = append(commands, cmdutil.CreateAliases(pipeline, []string{"pipeline"})...)
+	commands = append(commands, cmdutil.CreateAliases(pipelineDocs, []string{"pipeline"})...)
 
 	var build bool
 	var pushImages bool

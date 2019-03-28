@@ -69,6 +69,11 @@ func TestCommandAliases(t *testing.T) {
 				"Command must provide a 'Short' description string: %s",
 				strings.Join(path, " "),
 			)
+			require.True(
+				t, subcmd.Long != "",
+				"Command must provide a 'Long' description string: %s",
+				strings.Join(path, " "),
+			)
 			require.False(
 				t, strings.ContainsAny(subcmd.Name(), "[<({})>]"),
 				"Command name contains invalid characters: %s (%s)",
