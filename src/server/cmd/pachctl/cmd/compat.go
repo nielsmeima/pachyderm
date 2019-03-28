@@ -72,7 +72,7 @@ func apply_v1_8_command_compat(rootCmd *cobra.Command, noMetrics *bool, noPortFo
 		compatCmd := &cobra.Command{}
 		*compatCmd = *findCommand(newName)
 
-		useSplit := strings.SplitN(compatCmd.Use, " ", 1)
+		useSplit := strings.SplitN(compatCmd.Use, " ", 2)
 		if len(useSplit) == 2 {
 			compatCmd.Use = fmt.Sprintf("%s %s", oldName, useSplit[1])
 		} else {
@@ -183,13 +183,6 @@ $ pachctl start-commit test -p XXX
 
 		"finish commit": {
 			Use: "finish-commit <repo> <branch-or-commit>",
-			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
-				return cmdutil.RunFixedArgs(2, transformRepoBranch(cmd, newRun))
-			},
-		},
-
-		"inspect commit": {
-			Use: "inspect-commit <repo> <branch-or-commit>",
 			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
 				return cmdutil.RunFixedArgs(2, transformRepoBranch(cmd, newRun))
 			},
@@ -531,6 +524,63 @@ $ pachctl list-job -p foo bar/YYY`,
 	oldListJob.Flags().BoolVar(&fullTimestamps, "full-timestamps", false, "Return absolute timestamps (as opposed to the default, relative timestamps).")
 	oldListJob.Flags().BoolVar(&raw, "raw", false, "disable pretty printing, print raw json")
 	commands = append(commands, oldListJob)
+
+	oldPrintDetailedCommitInfo := func (commitInfo *PrintableCommitInfo) error {
+	 template, err := template.New("CommitInfo").Funcs(funcMap).Parse(
+		 `Commit: {{.Commit.Repo.Name}}/{{.Commit.ID}}{{if .Description}}
+Description: {{.Description}}{{end}}{{if .ParentCommit}}
+Parent: {{.ParentCommit.ID}}{{end}}{{if .FullTimestamps}}
+Started: {{.Started}}{{else}}
+Started: {{prettyAgo .Started}}{{end}}{{if .Finished}}{{if .FullTimestamps}}
+Finished: {{.Finished}}{{else}}
+Finished: {{prettyAgo .Finished}}{{end}}{{end}}
+Size: {{prettySize .SizeBytes}}{{if .Provenance}}
+Provenance: {{range .Provenance}} {{.Repo.Name}}/{{.ID}}{{end}}{{end}}
+`)
+	 if err != nil {
+		 return err
+	 }
+	 err = template.Execute(os.Stdout, commitInfo)
+	 if err != nil {
+		 return err
+	 }
+	 return nil
+	}
+
+	// inspect-commit had its output changed to use 'repo@commit' instead of
+	// 'repo/commit' - reimplement it here to use the old pretty formatter.
+	newInspectCommit := findCommand("inspect commit")
+	oldInspectCommit := &cobra.Command{
+		Use:   "inspect-commit <repo> <commit>",
+		Short: newInspectCommit.Short,
+		Long:  newInspectCommit.Long,
+		Run:   cmdutil.RunFixedArgs(2, func(args []string) error {
+			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
+			if err != nil {
+				return err
+			}
+			defer client.Close()
+			commitInfo, err := client.InspectCommit(args[0], args[1])
+			if err != nil {
+				return err
+			}
+			if commitInfo == nil {
+				return fmt.Errorf("commit %s not found", args[1])
+			}
+			if raw {
+				marshaller := &jsonpb.Marshaler{Indent: "  "}
+				return marshaller.Marshal(os.Stdout, commitInfo)
+			}
+			ci := &pretty.PrintableCommitInfo{
+				CommitInfo:     commitInfo,
+				FullTimestamps: fullTimestamps,
+			}
+			return oldPrintDetailedCommitInfo(ci)
+		}),
+	}
+	oldInspectCommit.Flags().BoolVar(&fullTimestamps, "full-timestamps", false, "Return absolute timestamps (as opposed to the default, relative timestamps).")
+	oldInspectCommit.Flags().BoolVar(&raw, "raw", false, "disable pretty printing, print raw json")
+	commands = append(commands, oldInspectCommit)
 
 	// Apply the 'Hidden' attribute to all these commands so they don't pollute help
 	for _, cmd := range commands {
