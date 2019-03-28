@@ -2,13 +2,20 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/gogo/protobuf/jsonpb"
+	ppspretty "github.com/pachyderm/pachyderm/src/server/pps/pretty"
+	"github.com/pachyderm/pachyderm/src/server/pkg/tabwriter"
 	"github.com/pachyderm/pachyderm/src/server/pkg/cmdutil"
+	"github.com/pachyderm/pachyderm/src/client"
+	"github.com/pachyderm/pachyderm/src/client/pfs"
+	"github.com/pachyderm/pachyderm/src/client/pps"
 
 	"github.com/spf13/cobra"
 )
-func apply_v1_8_command_compat(rootCmd *cobra.Command) {
+func apply_v1_8_command_compat(rootCmd *cobra.Command, noMetrics *bool, noPortForwarding *bool) {
 	var commands []*cobra.Command
 
 	// Helper functions to avoid repetition
@@ -80,31 +87,65 @@ func apply_v1_8_command_compat(rootCmd *cobra.Command) {
 	type CompatChanges struct {
 		Use string
 		Example string
-		Run func(RunFunc) RunFunc
+		Run func(*cobra.Command, RunFunc) RunFunc
 	}
 
 	// These helper functions will transform positional command-line args and
 	// pass-through to the new implementations of the command so we can maintain
 	// a single code path.
-	transformRepoBranch := func(newRun RunFunc) func([]string) error {
+	transformRepoBranch := func(cmd *cobra.Command, newRun RunFunc) func([]string) error {
 		return func(args []string) error {
 			var newArgs []string
+			var repo string
 
-			newRun(nil, newArgs)
+			for i, arg := range args {
+				switch i % 2 {
+				case 0:
+					repo = arg
+				case 1:
+					newArgs = append(newArgs, fmt.Sprintf("%s@%s", repo, arg))
+					repo = ""
+				}
+			}
+
+			if repo != "" {
+				newArgs = append(newArgs, repo)
+			}
+
+			newRun(cmd, newArgs)
 			return nil
 		}
 	}
 
-	transformRepoBranchFile := func(newRun RunFunc) func([]string) error {
+	transformRepoBranchFile := func(cmd *cobra.Command, newRun RunFunc) func([]string) error {
 		return func(args []string) error {
 			var newArgs []string
+			var repoBranch string
 
-			newRun(nil, newArgs)
+			for i, arg := range args {
+				switch i % 2 {
+				case 0:
+					repoBranch = arg
+				case 1:
+					repoBranch = fmt.Sprintf("%s@%s", repoBranch, arg)
+				case 2:
+					newArgs = append(newArgs, fmt.Sprintf("%s:%s", repoBranch, arg))
+					repoBranch = ""
+				}
+			}
+
+			if repoBranch != "" {
+				newArgs = append(newArgs, repoBranch)
+			}
+
+			newRun(cmd, newArgs)
 			return nil
 		}
 	}
 
-	transformRepoSlashBranch := func(newRun RunFunc) func([]string) error {
+	// A few places pre-v1.9 accepted arguments of the form repo/branch -
+	// post-v1.9, we now expect repo@branch
+	transformRepoSlashBranch := func(cmd *cobra.Command, newRun RunFunc) func([]string) error {
 		return func(args []string) error {
 			var newArgs []string
 
@@ -112,7 +153,7 @@ func apply_v1_8_command_compat(rootCmd *cobra.Command) {
 				newArgs = append(newArgs, strings.Replace(arg, "/", "@", 1))
 			}
 
-			newRun(nil, newArgs)
+			newRun(cmd, newArgs)
 			return nil
 		}
 	}
@@ -135,43 +176,43 @@ $ pachctl start-commit test patch -p master
 # Start a commit with XXX as the parent in repo "test", not on any branch
 $ pachctl start-commit test -p XXX
 			`,
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunBoundedArgs(1, 2, transformRepoBranch(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunBoundedArgs(1, 2, transformRepoBranch(cmd, newRun))
 			},
 		},
 
 		"finish commit": {
 			Use: "finish-commit <repo> <branch-or-commit>",
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunFixedArgs(2, transformRepoBranch(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunFixedArgs(2, transformRepoBranch(cmd, newRun))
 			},
 		},
 
 		"inspect commit": {
 			Use: "inspect-commit <repo> <branch-or-commit>",
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunFixedArgs(2, transformRepoBranch(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunFixedArgs(2, transformRepoBranch(cmd, newRun))
 			},
 		},
 
 		"subscribe commit": {
 			Use: "subscribe-commit <repo> <branch>",
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunFixedArgs(2, transformRepoBranch(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunFixedArgs(2, transformRepoBranch(cmd, newRun))
 			},
 		},
 
 		"delete commit": {
 			Use: "delete-commit <repo> <commit>",
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunFixedArgs(2, transformRepoBranch(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunFixedArgs(2, transformRepoBranch(cmd, newRun))
 			},
 		},
 
 		"delete branch": {
 			Use: "delete-branch <repo> <branch>",
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunFixedArgs(2, transformRepoBranch(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunFixedArgs(2, transformRepoBranch(cmd, newRun))
 			},
 		},
 
@@ -183,8 +224,8 @@ $ pachctl flush-job foo/XXX bar/YYY
 
 # return jobs caused by foo/XXX leading to pipelines bar and baz
 $ pachctl flush-job foo/XXX -p bar -p baz`,
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.Run(transformRepoSlashBranch(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.Run(transformRepoSlashBranch(cmd, newRun))
 			},
 		},
 
@@ -196,8 +237,8 @@ $ pachctl flush-commit foo/XXX bar/YYY
 
 # return commits caused by foo/XXX leading to repos bar and baz
 $ pachctl flush-commit foo/XXX -r bar -r baz`,
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.Run(transformRepoSlashBranch(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.Run(transformRepoSlashBranch(cmd, newRun))
 			},
 		},
 
@@ -242,8 +283,8 @@ $ pachctl put-file repo branch -i file
 # NOTE this URL can reference local files, so it could cause you to put sensitive
 # files into your Pachyderm cluster.
 $ pachctl put-file repo branch -i http://host/path`,
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunBoundedArgs(2, 3, transformRepoBranchFile(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunBoundedArgs(2, 3, transformRepoBranchFile(cmd, newRun))
 			},
 		},
 
@@ -260,15 +301,15 @@ $ pachctl get-file foo master^ XXX
 # get file "XXX" in the grandparent of the current head of branch "master"
 # in repo "foo"
 $ pachctl get-file foo master^2 XXX`,
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunFixedArgs(3, transformRepoBranchFile(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunFixedArgs(3, transformRepoBranchFile(cmd, newRun))
 			},
 		},
 
 		"inspect file": {
 			Use:   "inspect-file <repo> <commit> <path/to/file>",
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunFixedArgs(3, transformRepoBranchFile(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunFixedArgs(3, transformRepoBranchFile(cmd, newRun))
 			},
 		},
 
@@ -294,8 +335,8 @@ $ pachctl list-file foo master --history n
 
 # list all versions of top-level files on branch "master" in repo "foo"
 $ pachctl list-file foo master --history -1`,
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunBoundedArgs(2, 3, transformRepoBranchFile(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunBoundedArgs(2, 3, transformRepoBranchFile(cmd, newRun))
 			},
 		},
 
@@ -309,22 +350,22 @@ $ pachctl glob-file foo master "A*"
 
 # Return files in repo "foo" on branch "master" under directory "data".
 $ pachctl glob-file foo master "data/*"`,
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunFixedArgs(3, transformRepoBranchFile(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunFixedArgs(3, transformRepoBranchFile(cmd, newRun))
 			},
 		},
 
 		"delete file": {
 			Use: "delete-file <repo> <commit> <path/to/file>",
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunFixedArgs(3, transformRepoBranchFile(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunFixedArgs(3, transformRepoBranchFile(cmd, newRun))
 			},
 		},
 
 		"copy file": {
 			Use: "copy-file <src-repo> <src-commit> <src-path> <dst-repo> <dst-commit> <dst-path>",
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunFixedArgs(6, transformRepoBranchFile(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunFixedArgs(6, transformRepoBranchFile(cmd, newRun))
 			},
 		},
 
@@ -336,8 +377,8 @@ $ pachctl diff-file foo master path
 
 # Return the diff between foo master path1 and bar master path2.
 $ pachctl diff-file foo master path1 bar master path2`,
-			Run: func (newRun RunFunc) RunFunc {
-				return cmdutil.RunBoundedArgs(3, 6, transformRepoBranchFile(newRun))
+			Run: func (cmd *cobra.Command, newRun RunFunc) RunFunc {
+				return cmdutil.RunBoundedArgs(3, 6, transformRepoBranchFile(cmd, newRun))
 			},
 		},
 	}
@@ -348,11 +389,51 @@ $ pachctl diff-file foo master path1 bar master path2`,
 		*oldCmd = *newCmd
 		oldCmd.Use = changes.Use
 		oldCmd.Example = changes.Example
-		oldCmd.Run = changes.Run(newCmd.Run)
+		oldCmd.Run = changes.Run(newCmd, newCmd.Run)
 		commands = append(commands, oldCmd)
 	}
 
-	oldParseBranches := func()
+	// ParseCommits takes a slice of arguments of the form "repo/commit-id" or
+	// "repo" (in which case we consider the commit ID to be empty), and returns
+	// a list of *pfs.Commits
+	oldParseCommits := func(args []string) ([]*pfs.Commit, error) {
+		var commits []*pfs.Commit
+		for _, arg := range args {
+			parts := strings.SplitN(arg, "/", 2)
+			hasRepo := len(parts) > 0 && parts[0] != ""
+			hasCommit := len(parts) == 2 && parts[1] != ""
+			if hasCommit && !hasRepo {
+				return nil, fmt.Errorf("invalid commit id \"%s\": repo cannot be empty", arg)
+			}
+			commit := &pfs.Commit{
+				Repo: &pfs.Repo{
+					Name: parts[0],
+				},
+			}
+			if len(parts) == 2 {
+				commit.ID = parts[1]
+			} else {
+				commit.ID = ""
+			}
+			commits = append(commits, commit)
+		}
+		return commits, nil
+	}
+
+	// ParseBranches takes a slice of arguments of the form "repo/branch-name" or
+	// "repo" (in which case we consider the branch name to be empty), and returns
+	// a list of *pfs.Branches
+	oldParseBranches := func(args []string) ([]*pfs.Branch, error) {
+		commits, err := oldParseCommits(args)
+		if err != nil {
+			return nil, err
+		}
+		var result []*pfs.Branch
+		for _, commit := range commits {
+			result = append(result, &pfs.Branch{Repo: commit.Repo, Name: commit.ID})
+		}
+		return result, nil
+	}
 
 	// create-branch has affected flags, so just duplicate the command entirely
 	var branchProvenance cmdutil.RepeatedStringArg
@@ -360,8 +441,8 @@ $ pachctl diff-file foo master path1 bar master path2`,
 	newCreateBranch := findCommand("create branch")
 	oldCreateBranch := &cobra.Command{
 		Use:   "create-branch <repo> <branch>",
-		Short: newCreateBranch.Short
-		Long:  newCreateBranch.Long
+		Short: newCreateBranch.Short,
+		Long:  newCreateBranch.Long,
 		Run: cmdutil.RunFixedArgs(2, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
@@ -377,6 +458,7 @@ $ pachctl diff-file foo master path1 bar master path2`,
 	}
 	oldCreateBranch.Flags().VarP(&branchProvenance, "provenance", "p", "The provenance for the branch.")
 	oldCreateBranch.Flags().StringVarP(&head, "head", "", "", "The head of the newly created branch.")
+	commands = append(commands, oldCreateBranch)
 
 	// list-job has affected flags, so just duplicate the command entirely
 	var raw bool
@@ -387,8 +469,8 @@ $ pachctl diff-file foo master path1 bar master path2`,
 	newListJob := findCommand("list job")
 	oldListJob := &cobra.Command{
 		Use:     "list-job",
-		Short:   newListJob.Short
-		Long:    newListJob.Long
+		Short:   newListJob.Short,
+		Long:    newListJob.Long,
 		Example: `
 # return all jobs
 $ pachctl list-job
@@ -402,7 +484,7 @@ $ pachctl list-job foo/XXX bar/YYY
 # return all jobs in pipeline foo and whose input commits include bar/YYY
 $ pachctl list-job -p foo bar/YYY`,
 		Run:     cmdutil.RunFixedArgs(0, func(args []string) error {
-			client, err := pachdclient.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
+			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
 				return err
 			}
@@ -425,16 +507,17 @@ $ pachctl list-job -p foo bar/YYY`,
 			}
 
 			if raw {
-				return client.ListJobF(pipelineName, commits, outputCommit, func(ji *ppsclient.JobInfo) error {
+				return client.ListJobF(pipelineName, commits, outputCommit, func(ji *pps.JobInfo) error {
+					marshaller := &jsonpb.Marshaler{Indent: "  "}
 					if err := marshaller.Marshal(os.Stdout, ji); err != nil {
 						return err
 					}
 					return nil
 				})
 			}
-			writer := tabwriter.NewWriter(os.Stdout, pretty.JobHeader)
-			if err := client.ListJobF(pipelineName, commits, outputCommit, func(ji *ppsclient.JobInfo) error {
-				pretty.PrintJobInfo(writer, ji, fullTimestamps)
+			writer := tabwriter.NewWriter(os.Stdout, ppspretty.JobHeader)
+			if err := client.ListJobF(pipelineName, commits, outputCommit, func(ji *pps.JobInfo) error {
+				ppspretty.PrintJobInfo(writer, ji, fullTimestamps)
 				return nil
 			}); err != nil {
 				return err
@@ -442,11 +525,12 @@ $ pachctl list-job -p foo bar/YYY`,
 			return writer.Flush()
 		}),
 	}
-	listJob.Flags().StringVarP(&pipelineName, "pipeline", "p", "", "Limit to jobs made by pipeline.")
-	listJob.Flags().StringVarP(&outputCommitStr, "output", "o", "", "List jobs with a specific output commit.")
-	listJob.Flags().StringSliceVarP(&inputCommitStrs, "input", "i", []string{}, "List jobs with a specific set of input commits.")
-	listJob.Flags().BoolVar(&fullTimestamps, "full-timestamps", false, "Return absolute timestamps (as opposed to the default, relative timestamps).")
-	listJob.Flags().BoolVar(&raw, "raw", false, "disable pretty printing, print raw json")
+	oldListJob.Flags().StringVarP(&pipelineName, "pipeline", "p", "", "Limit to jobs made by pipeline.")
+	oldListJob.Flags().StringVarP(&outputCommitStr, "output", "o", "", "List jobs with a specific output commit.")
+	oldListJob.Flags().StringSliceVarP(&inputCommitStrs, "input", "i", []string{}, "List jobs with a specific set of input commits.")
+	oldListJob.Flags().BoolVar(&fullTimestamps, "full-timestamps", false, "Return absolute timestamps (as opposed to the default, relative timestamps).")
+	oldListJob.Flags().BoolVar(&raw, "raw", false, "disable pretty printing, print raw json")
+	commands = append(commands, oldListJob)
 
 	// Apply the 'Hidden' attribute to all these commands so they don't pollute help
 	for _, cmd := range commands {
