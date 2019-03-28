@@ -570,8 +570,8 @@ $ pachctl {{alias}} test@master --new`,
 	})...)
 
 	branchDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Docs for branches.",
+		Long:  "Docs for branches.",
 	}
 	commands = append(commands, cmdutil.CreateAliases(branchDocs, []string{"branch"})...)
 
@@ -1158,15 +1158,15 @@ $ pachctl {{alias}} foo@master:path1 bar@master:path2`,
 	})...)
 
 	objectDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Docs for objects.",
+		Long:  "Docs for objects.",
 	}
-	commands = append(commands, cmdutil.CreateAliases(objectDocs, []string{"tag"})...)
+	commands = append(commands, cmdutil.CreateAliases(objectDocs, []string{"object"})...)
 
 	getObject := &cobra.Command{
 		Use:   "{{alias}} <hash>",
-		Short: "Return the contents of an object",
-		Long:  "Return the contents of an object",
+		Short: "Print the contents of an object.",
+		Long:  "Print the contents of an object.",
 		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {
@@ -1182,15 +1182,15 @@ $ pachctl {{alias}} foo@master:path1 bar@master:path2`,
 	})...)
 
 	tagDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Docs for tags.",
+		Long:  "Docs for tags.",
 	}
 	commands = append(commands, cmdutil.CreateAliases(tagDocs, []string{"tag"})...)
 
 	getTag := &cobra.Command{
 		Use:   "{{alias}} <tag>",
-		Short: "Return the contents of a tag",
-		Long:  "Return the contents of a tag",
+		Short: "Print the contents of a tag.",
+		Long:  "Print the contents of a tag.",
 		Run:   cmdutil.RunFixedArgs(1, func(args []string) error {
 			client, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
 			if err != nil {

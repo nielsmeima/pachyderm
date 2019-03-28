@@ -3,6 +3,7 @@ package cmdutil
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/pachyderm/pachyderm/src/client/pfs"
@@ -230,20 +231,38 @@ func CreateAliases(cmd *cobra.Command, invocations []string) []*cobra.Command {
 // a single coherent cobra command tree (with root command 'root').  Because
 // 'CreateAliases' generates empty commands to preserve
 func MergeCommands(root *cobra.Command, children []*cobra.Command) {
-	// Move over any commands without subcommands, save the rest into a new slice
-	// TODO: do this iteratively, going deeper into the command tree until no commands remain
-	var nested []*cobra.Command
-	for _, cmd := range children {
-    if cmd.HasSubCommands() {
-			nested = append(nested, cmd)
-		} else {
-			root.AddCommand(cmd)
+	// Implement our own 'find' function because Command.Find is not reliable?
+	findCommand := func(parent *cobra.Command, name string) *cobra.Command {
+		for _, cmd := range parent.Commands() {
+			if cmd.Name() == name {
+				return cmd
+			}
 		}
+		return nil
 	}
 
-	for _, cmd := range nested {
-		parent, _, err := root.Find([]string{cmd.Name()})
-		if err != nil {
+	// Sort children by max nesting depth - this will put 'docs' commands first,
+	// so they are not overwritten by logical commands added by aliases.
+	var depth func(*cobra.Command) int
+	depth = func(cmd *cobra.Command) int {
+		maxDepth := 0
+		for _, subcmd := range cmd.Commands() {
+			subcmdDepth := depth(subcmd)
+			if subcmdDepth > maxDepth {
+				maxDepth = subcmdDepth
+			}
+		}
+		return maxDepth + 1
+	}
+
+	sort.Slice(children, func(i, j int) bool {
+		return depth(children[i]) < depth(children[j])
+	})
+
+	// Move each child command over to the main command tree recursively
+	for _, cmd := range children {
+		parent := findCommand(root, cmd.Name())
+		if parent == nil {
 			root.AddCommand(cmd)
 		} else {
 			MergeCommands(parent, cmd.Commands())

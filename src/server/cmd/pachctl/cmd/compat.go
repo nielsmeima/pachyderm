@@ -18,16 +18,21 @@ import (
 
 	"github.com/spf13/cobra"
 )
-func apply_v1_8_command_compat(rootCmd *cobra.Command, noMetrics *bool, noPortForwarding *bool) {
+func applyCommandCompat1_8(rootCmd *cobra.Command, noMetrics *bool, noPortForwarding *bool) {
 	var commands []*cobra.Command
 
-	// Helper functions to avoid repetition
+	// Command.Find matches args as well as command names, so implement our own
 	findCommand := func (fullName string) *cobra.Command {
 		cursor := rootCmd
 		for _, name := range strings.SplitN(fullName, " ", -1) {
-			var err error
-			cursor, _, err = cursor.Find([]string{name})
-			if err != nil {
+			var next *cobra.Command
+			for _, cmd := range cursor.Commands() {
+				if cmd.Name() == name {
+					next = cmd
+				}
+			}
+			cursor = next
+			if cursor == nil {
 				panic(fmt.Sprintf("Could not find '%s' command to apply v1.8 compatibility\n", fullName))
 			}
 		}
@@ -37,7 +42,6 @@ func apply_v1_8_command_compat(rootCmd *cobra.Command, noMetrics *bool, noPortFo
 	// These commands are backwards compatible aside from the reorganization, just
 	// add new aliases.
 	simpleCompat := map[string]string{
-		// TODO this command used to be deprecated and was removed: "set branch": "set-branch"
 		"create repo": "create-repo",
 		"update repo": "update-repo",
 		"inspect repo": "inspect-repo",

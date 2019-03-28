@@ -269,8 +269,8 @@ $ pachctl {{alias}} foo@XXX -p bar -p baz`,
 	})...)
 
 	datumDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Docs for datums.",
+		Long:  "Docs for datums.",
 	}
 	commands = append(commands, cmdutil.CreateAliases(datumDocs, []string{"datum"})...)
 

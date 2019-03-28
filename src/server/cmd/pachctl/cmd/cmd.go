@@ -556,104 +556,104 @@ This resets the cluster to its initial state.`,
 
 	// Logical commands for grouping commands by verb (no run functions)
 	deleteDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Delete an existing Pachyderm resource.",
+		Long:  "Delete an existing Pachyderm resource.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(deleteDocs, []string{"delete"})...)
 
 	createDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Create a new instance of a Pachyderm resource.",
+		Long:  "Create a new instance of a Pachyderm resource.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(createDocs, []string{"create"})...)
 
 	updateDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Change the properties of an existing Pachyderm resource.",
+		Long:  "Change the properties of an existing Pachyderm resource.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(updateDocs, []string{"update"})...)
 
 	inspectDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Show detailed information about a Pachyderm resource.",
+		Long:  "Show detailed information about a Pachyderm resource.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(inspectDocs, []string{"inspect"})...)
 
 	listDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Print a list of Pachyderm resources of a specific type.",
+		Long:  "Print a list of Pachyderm resources of a specific type.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(listDocs, []string{"list"})...)
 
 	startDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Start a Pachyderm resource.",
+		Long:  "Start a Pachyderm resource.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(startDocs, []string{"start"})...)
 
 	finishDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Finish a Pachyderm resource.",
+		Long:  "Finish a Pachyderm resource.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(finishDocs, []string{"finish"})...)
 
 	flushDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Wait for the side-effects of a Pachyderm resource to propagate.",
+		Long:  "Wait for the side-effects of a Pachyderm resource to propagate.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(flushDocs, []string{"flush"})...)
 
 	subscribeDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Wait for notifications of changes to a Pachyderm resource.",
+		Long:  "Wait for notifications of changes to a Pachyderm resource.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(subscribeDocs, []string{"subscribe"})...)
 
 	putDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Insert data into the Pachyderm filesystem.",
+		Long:  "Insert data into the Pachyderm filesystem.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(putDocs, []string{"put"})...)
 
 	copyDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Copy data between locations in the Pachyderm filesystem",
+		Long:  "Copy data between locations in the Pachyderm filesystem",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(copyDocs, []string{"copy"})...)
 
 	getDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Get the raw data represented by a Pachyderm resource.",
+		Long:  "Get the raw data represented by a Pachyderm resource.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(getDocs, []string{"get"})...)
 
 	globDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Print a list of Pachyderm resources matching a glob pattern.",
+		Long:  "Print a list of Pachyderm resources matching a glob pattern.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(globDocs, []string{"glob"})...)
 
 	diffDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Show the differences between two Pachyderm resources.",
+		Long:  "Show the differences between two Pachyderm resources.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(diffDocs, []string{"diff"})...)
 
 	stopDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Cancel an ongoing task.",
+		Long:  "Cancel an ongoing task.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(stopDocs, []string{"stop"})...)
 
 	restartDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Resume a stopped task.",
+		Long:  "Resume a stopped task.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(restartDocs, []string{"restart"})...)
 
 	editDocs := &cobra.Command{
-		Short: "",
-		Long:  "",
+		Short: "Edit the value of an existing Pachyderm resource.",
+		Long:  "Edit the value of an existing Pachyderm resource.",
 	}
 	subcommands = append(subcommands, cmdutil.CreateAliases(editDocs, []string{"edit"})...)
 
@@ -667,14 +667,21 @@ This resets the cluster to its initial state.`,
 
 	cmdutil.MergeCommands(rootCmd, subcommands)
 
-	originalUsageFunc := rootCmd.UsageFunc()
-	rootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
-		if cmd != rootCmd {
-			return originalUsageFunc(cmd)
-		}
+	applyRootUsageFunc(rootCmd)
+	applyCommandCompat1_8(rootCmd, &noMetrics, &noPortForwarding)
 
-		return originalUsageFunc(cmd)
-	})
+	return rootCmd
+}
+
+func printVersionHeader(w io.Writer) {
+	fmt.Fprintf(w, "COMPONENT\tVERSION\t\n")
+}
+
+func printVersion(w io.Writer, component string, v *versionpb.Version) {
+	fmt.Fprintf(w, "%s\t%s\t\n", component, version.PrettyPrintVersion(v))
+}
+
+func applyRootUsageFunc(rootCmd *cobra.Command) {
 	/*
 	`Usage:{{if .Runnable}}
   {{if .HasAvailableFlags}}{{appendIfNotPresent .UseLine "[flags]"}}{{else}}{{.UseLine}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
@@ -703,15 +710,12 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 `
 	*/
 
-	apply_v1_8_command_compat(rootCmd, &noMetrics, &noPortForwarding)
+	originalUsageFunc := rootCmd.UsageFunc()
+	rootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
+		if cmd != rootCmd {
+			return originalUsageFunc(cmd)
+		}
 
-	return rootCmd
-}
-
-func printVersionHeader(w io.Writer) {
-	fmt.Fprintf(w, "COMPONENT\tVERSION\t\n")
-}
-
-func printVersion(w io.Writer, component string, v *versionpb.Version) {
-	fmt.Fprintf(w, "%s\t%s\t\n", component, version.PrettyPrintVersion(v))
+		return originalUsageFunc(cmd)
+	})
 }

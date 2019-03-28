@@ -382,7 +382,9 @@ If <object store backend> is \"s3\", then the arguments are:
 	deployAmazon.Flags().StringVar(&creds, "credentials", "", "Use the format \"<id>,<secret>[,<token>]\". You can get a token by running \"aws sts get-session-token\".")
 	deployAmazon.Flags().StringVar(&vault, "vault", "", "Use the format \"<address/hostport>,<role>,<token>\".")
 	deployAmazon.Flags().StringVar(&iamRole, "iam-role", "", fmt.Sprintf("Use the given IAM role for authorization, as opposed to using static credentials. The given role will be applied as the annotation %s, this used with a Kubernetes IAM role management system such as kube2iam allows you to give pachd credentials in a more secure way.", assets.IAMAnnotation))
-	commands = append(commands, cmdutil.CreateAliases(deployAmazon, []string{"deploy amazon"})...)
+	commands = append(commands, cmdutil.CreateAliases(deployAmazon, []string{
+		"deploy amazon",
+	})...)
 
 	deployMicrosoft := &cobra.Command{
 		Use:   "{{alias}} <container> <account-name> <account-key> <disk-size>",
@@ -429,12 +431,6 @@ If <object store backend> is \"s3\", then the arguments are:
 		"deploy microsoft",
 		"deploy azure",
 	})...)
-
-	deployStorage := &cobra.Command{
-		Short: "Deploy credentials for a particular storage provider.",
-		Long:  "Deploy credentials for a particular storage provider, so that Pachyderm can ingress data from and egress data to it.",
-	}
-	commands = append(commands, cmdutil.CreateAliases(deployStorage, []string{"deploy storage"})...)
 
 	deployStorageSecrets := func (data map[string][]byte) error {
 		c, err := client.NewOnUserMachine(!*noMetrics, !*noPortForwarding, "user")
@@ -498,6 +494,12 @@ If <object store backend> is \"s3\", then the arguments are:
 		"deploy storage microsoft",
 	})...)
 
+	deployStorage := &cobra.Command{
+		Short: "Deploy credentials for a particular storage provider.",
+		Long:  "Deploy credentials for a particular storage provider, so that Pachyderm can ingress data from and egress data to it.",
+	}
+	commands = append(commands, cmdutil.CreateAliases(deployStorage, []string{"deploy storage"})...)
+
 	listImages := &cobra.Command{
 		Short: "Output the list of images in a deployment.",
 		Long:  "Output the list of images in a deployment.",
@@ -509,8 +511,7 @@ If <object store backend> is \"s3\", then the arguments are:
 		}),
 	}
 	commands = append(commands, cmdutil.CreateAliases(listImages, []string{
-    "deploy list images",
-	  "deploy images list",
+    "deploy list-images",
 	})...)
 
 	exportImages := &cobra.Command{
@@ -531,8 +532,7 @@ If <object store backend> is \"s3\", then the arguments are:
 		}),
 	}
 	commands = append(commands, cmdutil.CreateAliases(exportImages, []string{
-    "deploy export images",
-	  "deploy images export",
+    "deploy export-images",
 	})...)
 
 	importImages := &cobra.Command{
@@ -553,8 +553,7 @@ If <object store backend> is \"s3\", then the arguments are:
 		}),
 	}
 	commands = append(commands, cmdutil.CreateAliases(importImages, []string{
-    "deploy import images",
-	  "deploy images import",
+    "deploy import-images",
 	})...)
 
 	var blockCacheSize string

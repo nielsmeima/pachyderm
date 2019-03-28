@@ -51,46 +51,57 @@ func TestWeirdPortError(t *testing.T) {
 // its name).
 func TestCommandAliases(t *testing.T) {
 	pachctlCmd := PachctlCmd()
-	path := []string{"pachctl"}
+
+	// Replace the first component with 'pachctl' because it use os.Args[0]
+	path := func(cmd *cobra.Command) string {
+		return strings.Replace(cmd.CommandPath(), os.Args[0], "pachctl", 1)
+	}
+
+	paths := map[string]bool{}
 
 	var walk func(*cobra.Command)
 	walk = func(cmd *cobra.Command) {
 		require.True(
 			t, cmd.Run != nil || len(cmd.Commands()) > 0,
-			"Command is not runnable and has no child commands: %s (%s)",
-			strings.Join(path, " "), cmd.Short,
+			"Command is not runnable and has no child commands: '%s' (%s)",
+			path(cmd), cmd.Short,
 		)
 
 		for _, subcmd := range cmd.Commands() {
-			path = append(path, subcmd.Name())
+			// This should only happen if there is a bug in MergeCommands, or some
+			// code is bypassing it.
+			require.False(
+				t, paths[path(subcmd)],
+				"Multiple commands found with the same invocation: '%s'",
+				path(subcmd),
+			)
+
+			paths[path(subcmd)] = true
 
 			require.True(
 				t, subcmd.Short != "",
-				"Command must provide a 'Short' description string: %s",
-				strings.Join(path, " "),
+				"Command must provide a 'Short' description string: '%s'",
+				path(subcmd),
 			)
 			require.True(
 				t, subcmd.Long != "",
-				"Command must provide a 'Long' description string: %s",
-				strings.Join(path, " "),
+				"Command must provide a 'Long' description string: '%s' (%s)",
+				path(subcmd), subcmd.Short,
 			)
 			require.False(
 				t, strings.ContainsAny(subcmd.Name(), "[<({})>]"),
-				"Command name contains invalid characters: %s (%s)",
-				strings.Join(path, " "), subcmd.Short,
+				"Command name contains invalid characters: '%s' (%s)",
+				path(subcmd), subcmd.Short,
 			)
 			require.True(
 				t, subcmd.Use != "",
-				"Command must provide a 'Use' string: %s (%s)",
-				strings.Join(path, " "), subcmd.Short,
+				"Command must provide a 'Use' string: '%s' (%s)",
+				path(subcmd), subcmd.Short,
 			)
 
 			walk(subcmd)
-			path = path[:len(path) - 1]
 		}
 	}
 
 	walk(pachctlCmd)
-
-	// TODO: assert that every command name is unique in its level
 }
