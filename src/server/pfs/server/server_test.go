@@ -22,6 +22,7 @@ import (
 	pclient "github.com/pachyderm/pachyderm/src/client"
 	"github.com/pachyderm/pachyderm/src/client/pfs"
 	"github.com/pachyderm/pachyderm/src/client/pkg/require"
+	"github.com/pachyderm/pachyderm/src/client/pkg/grpcutil"
 	"github.com/pachyderm/pachyderm/src/server/pkg/ancestry"
 	"github.com/pachyderm/pachyderm/src/server/pkg/hashtree"
 	"github.com/pachyderm/pachyderm/src/server/pkg/obj"
@@ -4790,4 +4791,58 @@ func TestUpdateRepo(t *testing.T) {
 	newCreated, err := types.TimestampFromProto(ri.Created)
 	require.Equal(t, created, newCreated)
 	require.Equal(t, desc, ri.Description)
+}
+
+// TestPutFileByLines inserts many files by lines and ensures that all of them
+// have been placed in order. This checks for a regression where a file would
+// sometimes be inserted with lines out of order.
+func TestPutFileByLines(t *testing.T) {
+	pc := GetPachClient(t)
+	repo := tu.UniqueString("TestPutFileByLines")
+	require.NoError(t, pc.CreateRepo(repo))
+	require.NoError(t, pc.CreateBranch(repo, "master", "", nil))
+
+	filenames := []string{}
+	for i := 0; i < 100; i++ {
+		filenames = append(filenames, fmt.Sprintf("%d.txt", i))
+	}
+
+	for _, filename := range filenames {
+		file := pclient.NewFile(repo, "master", filename)
+
+		pfc, err := pc.PfsAPIClient.PutFile(pc.Ctx())
+		require.NoError(t, err)
+
+		err = pfc.Send(&pfs.PutFileRequest{ File: file, Value: []byte("A\n") })
+		require.NoError(t, grpcutil.ScrubGRPC(err))
+
+		err = pfc.Send(&pfs.PutFileRequest{ File: file, Value: []byte("B\n") })
+		require.NoError(t, grpcutil.ScrubGRPC(err))
+
+		_, err = pfc.CloseAndRecv()
+		err = grpcutil.ScrubGRPC(err)
+		require.NoError(t, err)
+	}
+
+	good := 0
+	bad := 0
+
+	for _, filename := range filenames {
+		reader, err := pc.GetFileReader(repo, "master", filename, 0, 0)
+		require.NoError(t, err)
+
+		scanner := bufio.NewScanner(reader)
+		ok := scanner.Scan()
+		require.True(t, ok)
+		line := scanner.Text()
+
+		if line == "A" {
+			good += 1
+		} else {
+			bad += 1
+		}
+	}
+
+	require.Equal(t, bad, 0)
+	require.Equal(t, good, 100)
 }
