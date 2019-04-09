@@ -221,6 +221,9 @@ docker-build:
 docker-build-proto:
 	docker build -t pachyderm_proto etc/proto
 
+docker-rebuild-proto:
+	docker build --no-cache -t pachyderm_proto etc/proto
+
 docker-build-netcat:
 	docker build -t pachyderm_netcat etc/netcat
 
