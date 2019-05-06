@@ -1315,6 +1315,13 @@ func putFileHelper(c *client.APIClient, pfc client.PutFileClient, repo, commit, 
 	recursive bool, overwrite bool, limiter limit.ConcurrencyLimiter, split string,
 	header []byte, footer []byte,
 	targetFileDatums uint, targetFileBytes uint, filesPut *gosync.Map) (retErr error) {
+	// Resolve the path, then trim any prefixed '../' to avoid sending bad paths
+	// to the server
+	path = filepath.Clean(path)
+	for strings.HasPrefix(path, "../") {
+		path = strings.TrimPrefix(path, "../")
+	}
+
 	if _, ok := filesPut.LoadOrStore(path, nil); ok {
 		return fmt.Errorf("multiple files put with the path %s, aborting, "+
 			"some files may already have been put and should be cleaned up with "+

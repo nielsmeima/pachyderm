@@ -359,6 +359,80 @@ func TestPutFileIntoOpenCommit(t *testing.T) {
 	require.YesError(t, err)
 }
 
+// Regression test: putting multiple files on an open commit would error out.
+// See here for more details: https://github.com/pachyderm/pachyderm/pull/3346
+func TestRegressionPutFileIntoOpenCommit(t *testing.T) {
+	client := GetPachClient(t)
+	require.NoError(t, client.CreateRepo("repo"))
+
+	commit, err := client.StartCommit("repo", "master")
+	require.NoError(t, err)
+
+	writer, err := client.NewPutFileClient()
+	require.NoError(t, err)
+
+	_, err = writer.PutFile("repo", commit.ID, "foo", strings.NewReader("foo\n"))
+	require.NoError(t, err)
+	_, err = writer.PutFile("repo", commit.ID, "bar", strings.NewReader("bar\n"))
+	require.NoError(t, err)
+
+	err = writer.Close()
+	require.NoError(t, err)
+
+	var fileInfos []*pfs.FileInfo
+	fileInfos, err = client.ListFile("repo", commit.ID, "")
+	require.NoError(t, err)
+	require.Equal(t, 2, len(fileInfos))
+
+	err = client.Close()
+	require.NoError(t, err)
+}
+
+func TestPutFileDirectoryTraversal(t *testing.T) {
+	var fileInfos []*pfs.FileInfo
+	client := GetPachClient(t)
+	require.NoError(t, client.CreateRepo("repo"))
+
+	commit, err := client.StartCommit("repo", "master")
+	require.NoError(t, err)
+
+	writer, err := client.NewPutFileClient()
+	require.NoError(t, err)
+	_, err = writer.PutFile("repo", commit.ID, "../foo", strings.NewReader("foo\n"))
+	require.NoError(t, err)
+	err = writer.Close()
+	require.YesError(t, err)
+
+	fileInfos, err = client.ListFile("repo", commit.ID, "")
+	require.NoError(t, err)
+	require.Equal(t, 0, len(fileInfos))
+
+	writer, err = client.NewPutFileClient()
+	require.NoError(t, err)
+	_, err = writer.PutFile("repo", commit.ID, "foo/../../bar", strings.NewReader("foo\n"))
+	require.NoError(t, err)
+	err = writer.Close()
+	require.YesError(t, err)
+
+	fileInfos, err = client.ListFile("repo", commit.ID, "")
+	require.NoError(t, err)
+	require.Equal(t, 0, len(fileInfos))
+
+	writer, err = client.NewPutFileClient()
+	require.NoError(t, err)
+	_, err = writer.PutFile("repo", commit.ID, "foo/../bar", strings.NewReader("foo\n"))
+	require.NoError(t, err)
+	err = writer.Close()
+	require.NoError(t, err)
+
+	fileInfos, err = client.ListFile("repo", commit.ID, "")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(fileInfos))
+
+	err = client.Close()
+	require.NoError(t, err)
+}
+
 func TestCreateInvalidBranchName(t *testing.T) {
 
 	client := GetPachClient(t)
