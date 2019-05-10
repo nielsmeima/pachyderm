@@ -869,9 +869,9 @@ func (d *driver) startCommit(txnCtx *txnenv.TransactionContext, ID string, paren
 
 func (d *driver) buildCommit(ctx context.Context, ID string, parent *pfs.Commit, branch string, provenance []*pfs.CommitProvenance, tree *pfs.Object) (*pfs.Commit, error) {
 	commit := &pfs.Commit{}
-	_, err := col.NewSTM(ctx, d.etcdClient, func(stm col.STM) error {
+	err := d.txnEnv.WithTransactionContext(ctx, func(txnCtx *txnenv.TransactionContext) error {
 		var err error
-		commit, err = d.makeCommit(d.txnEnv.NewContext(ctx, stm), ID, parent, branch, provenance, tree, nil, nil, "")
+		commit, err = d.makeCommit(txnCtx, ID, parent, branch, provenance, tree, nil, nil, "")
 		return err
 	})
 	return commit, err
@@ -1234,7 +1234,7 @@ func (d *driver) writeFinishedCommit(stm col.STM, commit *pfs.Commit, commitInfo
 	return nil
 }
 
-// propagateCommit selectively starts commits in or downstream of 'branches' in
+// propagateCommits selectively starts commits in or downstream of 'branches' in
 // order to restore the invariant that branch provenance matches HEAD commit
 // provenance:
 //   B.Head is provenant on A.Head <=>
@@ -1244,10 +1244,10 @@ func (d *driver) writeFinishedCommit(stm col.STM, commit *pfs.Commit, commitInfo
 // the name, 'branches' do not need a HEAD commit to propagate, though one may be
 // created.
 //
-// In other words, propagateCommit scans all branches b_downstream that are
+// In other words, propagateCommits scans all branches b_downstream that are
 // equal to or downstream of 'branches', and if the HEAD of b_downstream isn't
-// provenant on the HEADs of b_downstream's provenance, propagateCommit starts
-// a new HEAD commit in b_downstream that is. For example, propagateCommit
+// provenant on the HEADs of b_downstream's provenance, propagateCommits starts
+// a new HEAD commit in b_downstream that is. For example, propagateCommits
 // starts downstream output commits (which trigger PPS jobs) when new input
 // commits arrive on 'branch', when 'branches's HEAD is deleted, or when
 // 'branches' are newly created (i.e. in CreatePipeline).
@@ -1260,6 +1260,7 @@ func (d *driver) propagateCommits(stm col.STM, branches []*pfs.Branch) error {
 	key := path.Join
 	branchMap := map[string]*BranchData{}
 	for _, branch := range branches {
+		fmt.Printf("propagateCommits: %s@%s\n", branch.Repo.Name, branch.Name)
 		var head *pfs.CommitInfo
 		branchData, exists := branchMap[key(branch.Repo.Name, branch.Name)]
 		if !exists {
@@ -1319,6 +1320,7 @@ nextSubvBranch:
 		repo := branch.Repo
 		commits := d.commits(repo.Name).ReadWrite(stm)
 		branches := d.branches(repo.Name).ReadWrite(stm)
+		fmt.Printf("subvBranch iteration: %s@%s\n", branch.Repo.Name, branch.Name)
 
 		// Compute the full provenance of hypothetical new output commit to decide
 		// if we need it
@@ -1364,6 +1366,7 @@ nextSubvBranch:
 				commitProvMap[key(commitProv.Commit.ID, commitProv.Branch.Name)] = commitProv
 			}
 		}
+		fmt.Printf("Branch %s@%s commitProvMap: %s\n", branch.Repo.Name, branch.Name, commitProvMap)
 		if len(commitProvMap) == 0 {
 			// no input commits to process; don't create a new output commit
 			continue nextSubvBranch
@@ -1615,8 +1618,8 @@ func (d *driver) listCommitF(pachClient *client.APIClient, repo *pfs.Repo, to *p
 	}
 
 	// Make sure that the repo exists
-	err := col.NewDryrunSTM(ctx, d.etcdClient, func(stm col.STM) error {
-		_, err := d.inspectRepo(d.txnEnv.NewContext(ctx, stm), repo, !includeAuth)
+	err := d.txnEnv.EmptyReadTransaction(ctx, func(txnCtx *txnenv.TransactionContext) error {
+		_, err := d.inspectRepo(txnCtx, repo, !includeAuth)
 		return err
 	})
 	if err != nil {
@@ -2352,11 +2355,10 @@ func (d *driver) putFiles(pachClient *client.APIClient, s *putFileServer) error 
 		// oneOff puts only work on branches, so we know branch != "". We pass
 		// a commit with no ID, that ID will be filled in with the head of
 		// branch (if it exists).
-		_, err := col.NewSTM(ctx, d.etcdClient, func(stm col.STM) error {
-			_, err := d.makeCommit(d.txnEnv.NewContext(ctx, stm), "", client.NewCommit(repo, ""), branch, nil, nil, putFilePaths, putFileRecords, "")
+		return d.txnEnv.WithTransactionContext(ctx, func(txnCtx *txnenv.TransactionContext) error {
+			_, err := d.makeCommit(txnCtx, "", client.NewCommit(repo, ""), branch, nil, nil, putFilePaths, putFileRecords, "")
 			return err
 		})
-		return err
 	}
 	for i, file := range files {
 		if err := d.upsertPutFileRecords(pachClient, file, putFileRecords[i]); err != nil {
@@ -2735,13 +2737,10 @@ func (d *driver) copyFile(pachClient *client.APIClient, src *pfs.File, dst *pfs.
 	}
 	// dst is finished => all PutFileRecords are in 'records'--put in a new commit
 	if !dstIsOpenCommit {
-		ctx := pachClient.Ctx()
-		_, err := col.NewSTM(ctx, d.etcdClient, func(stm col.STM) error {
-			txnCtx := d.txnEnv.NewContext(ctx, stm)
+		return d.txnEnv.WithTransactionContext(pachClient.Ctx(), func(txnCtx *txnenv.TransactionContext) error {
 			_, err = d.makeCommit(txnCtx, "", client.NewCommit(dst.Commit.Repo.Name, ""), branch, nil, nil, paths, records, "")
 			return err
 		})
-		return err
 	}
 	return nil
 }
@@ -2907,9 +2906,8 @@ func (d *driver) getTreeForFile(pachClient *client.APIClient, file *pfs.File) (h
 	}
 
 	var result hashtree.HashTree
-	err := col.NewDryrunSTM(ctx, d.etcdClient, func(stm col.STM) error {
-		txnCtx := d.txnEnv.NewContext(ctx, stm)
-		commitInfo, err := d.resolveCommit(stm, file.Commit)
+	err := d.txnEnv.EmptyReadTransaction(ctx, func(txnCtx *txnenv.TransactionContext) error {
+		commitInfo, err := d.resolveCommit(txnCtx.Stm(), file.Commit)
 		if err != nil {
 			return err
 		}
@@ -3536,13 +3534,10 @@ func (d *driver) deleteFile(pachClient *client.APIClient, file *pfs.File) error 
 		if branch == "" {
 			return pfsserver.ErrCommitFinished{file.Commit}
 		}
-		ctx := pachClient.Ctx()
-		_, err := col.NewSTM(ctx, d.etcdClient, func(stm col.STM) error {
-			txnCtx := d.txnEnv.NewContext(ctx, stm)
+		return d.txnEnv.WithTransactionContext(pachClient.Ctx(), func(txnCtx *txnenv.TransactionContext) error {
 			_, err := d.makeCommit(txnCtx, "", client.NewCommit(file.Commit.Repo.Name, ""), branch, nil, nil, []string{file.Path}, []*pfs.PutFileRecords{&pfs.PutFileRecords{Tombstone: true}}, "")
 			return err
 		})
-		return err
 	}
 
 	return d.upsertPutFileRecords(pachClient, file, &pfs.PutFileRecords{Tombstone: true})
